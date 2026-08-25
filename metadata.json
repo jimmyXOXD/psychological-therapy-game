@@ -1,0 +1,6 @@
+{
+  "name": "The Defining Man: Despair Simulation",
+  "description": "A psychological strategy puzzle investigating the behavioral effects of negative faiths and despair through a dual-AI logic gate and telemetry tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

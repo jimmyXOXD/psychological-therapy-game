@@ -1,0 +1,21 @@
+{
+  "schema": {
+    "telemetry": {
+      "type": "collection",
+      "rules": [
+        {
+          "condition": "true",
+          "allow": ["create"]
+        }
+      ],
+      "document": {
+        "fields": {
+          "sessionId": { "type": "string" },
+          "action": { "type": "string" },
+          "details": { "type": "map" },
+          "timestamp": { "type": "timestamp" }
+        }
+      }
+    }
+  }
+}
