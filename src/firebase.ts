@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import firebaseConfig from "../firebase-applet-config.json";
+import aiStudioConfig from "../firebase-applet-config.json";
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+const app = initializeApp(aiStudioConfig);
+export const db = getFirestore(app, (aiStudioConfig as any).firestoreDatabaseId);
 
 export const logTelemetry = async (sessionId: string, action: string, details: Record<string, any>) => {
   try {
