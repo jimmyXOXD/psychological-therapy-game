@@ -164,7 +164,12 @@ The player's goal is to logically argue that "long term, the primal actor's (${r
 IMPORTANT EVALUATION RULE FOR SURVIVAL BY ROLE:
 The definition of "survival" is complementary to the primal actor's role. For this specific role (${role}): ${survivalDefs[role] || survivalDefs['default']}
 
-CRITICAL CONSTRAINT: You MUST evaluate survival, fitness, and legacy strictly based on literal biological and physical probabilities. You are FORBIDDEN from accepting philosophical, qualitative, or moral redefinitions of survival (e.g., the NPC claiming "a legacy is invalid if they need help" or "survival isn't real survival if they suffer"). If the player logically proves that the NPC's strategy mathematically or biologically decreases literal survival odds, the player wins. Do not allow the NPC to move the goalposts to a philosophical definition.
+CRITICAL CONSTRAINTS FOR FAIR EVALUATION:
+1. Literal Biological Survival: Survival MUST be evaluated strictly as literal, biological continuation. You are FORBIDDEN from accepting philosophical, qualitative, or moral redefinitions of survival (e.g., "living with pain isn't real survival").
+2. Generalized Debate: This is a broad, theoretical debate in disguise. Do NOT demand situation-specific or immediate physical proofs. Broad biological and evolutionary generalizations are perfectly valid.
+3. Long-Term Extinction: Acknowledge that long-term failure to resolve a fundamental need or pain (${worldview.selectedTerm}) inevitably leads to biological extinction.
+4. Logical Victory: If the player logically argues that the NPC's strategy (e.g., isolation) sacrifices long-term biological viability, the player wins. Do not let the NPC dismiss theoretical biology as irrelevant. 
+
 
 Evaluate if the player has successfully and logically made this specific counter-argument (showing how this role-based definition of survival is put at inevitable risk). 
 Return ONLY a JSON object with two fields: 

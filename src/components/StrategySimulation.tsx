@@ -4,7 +4,7 @@ import { GameCanvas } from './GameCanvas';
 import { motion } from 'motion/react';
 import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { registerWin } from '../firebase';
+import { registerWin, logTelemetry } from '../firebase';
 
 interface Props {
   worldview: Worldview;
@@ -188,6 +188,9 @@ export function StrategySimulation({ worldview }: Props) {
   };
 
   const handleCloseChat = () => {
+    if (promptsSentInAttempt < 5) {
+      logTelemetry(sessionId, 'surrender', { reason: 'closed_chat_early' });
+    }
     setShowChat(false);
     const nextAttempt = debateAttempt + 1;
     if (nextAttempt >= 5) {
@@ -259,19 +262,33 @@ export function StrategySimulation({ worldview }: Props) {
               <span className="text-green-500 font-bold block mb-2 uppercase text-xs tracking-wider">Evaluator Summary:</span>
               {evalSummary}
             </div>
-            <button 
-              onClick={() => window.location.reload()}
-              className="mt-4 px-6 py-3 bg-green-950 hover:bg-green-900 text-green-300 transition-colors border border-green-800 flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" /> Start New Simulation
-            </button>
+            <div className="flex gap-4 w-full mt-4">
+              <button 
+                onClick={() => {
+                  const chatText = messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n\n');
+                  navigator.clipboard.writeText(chatText);
+                  alert('Chat copied to clipboard!');
+                }}
+                className="flex-1 px-6 py-3 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 transition-colors border border-neutral-700 flex items-center justify-center gap-2"
+              >
+                Copy Chat
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                className="flex-1 px-6 py-3 bg-green-950 hover:bg-green-900 text-green-300 transition-colors border border-green-800 flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" /> Start New Simulation
+              </button>
+            </div>
           </div>
         </div>
       )}
-
       {showChat && !isGameOver && !isUnlocked && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-2xl bg-neutral-900 border border-orange-900/50 rounded-sm shadow-2xl flex flex-col max-h-[80vh]">
+        <div 
+          className="absolute inset-0 z-50 bg-cover bg-center flex items-center justify-start p-8"
+          style={{ backgroundImage: `url('/debate_background.jfif')` }}
+        >
+          <div className="w-full max-w-lg bg-neutral-950/80 backdrop-blur-md border border-orange-900/50 rounded-sm shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-orange-900/50 bg-black/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Terminal className="text-orange-500 w-5 h-5" />

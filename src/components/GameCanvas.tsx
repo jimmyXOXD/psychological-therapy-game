@@ -71,6 +71,11 @@ export function GameCanvas({
   const [tasksDone, setTasksDone] = useState(false);
   const [hudMsg, setHudMsg] = useState("");
   const [hearts, setHearts] = useState(3);
+  
+  const propsRef = useRef({ isPaused, onInteractPrimal, onGameOver, onCollectSpecialItem, debateAttempt, collectedItems });
+  useEffect(() => {
+    propsRef.current = { isPaused, onInteractPrimal, onGameOver, onCollectSpecialItem, debateAttempt, collectedItems };
+  }, [isPaused, onInteractPrimal, onGameOver, onCollectSpecialItem, debateAttempt, collectedItems]);
 
   const enemyImgRef = useRef<HTMLImageElement | null>(null);
   const strangerImgRef = useRef<HTMLImageElement | null>(null);
@@ -520,7 +525,7 @@ export function GameCanvas({
     const dist = (a: any, b: any) => Math.hypot(a.x - b.x, a.y - b.y);
 
     const update = (dt: number) => {
-      if (state.dead || isPaused) return;
+      if (state.dead || propsRef.current.isPaused) return;
 
       if (state.invincibilityTimer > 0) {
         state.invincibilityTimer -= dt;
@@ -765,7 +770,7 @@ export function GameCanvas({
           if (dist(state.player, ent) < ent.radius + 15) {
             const idx = ent.type === 'special_item_1' ? 0 : ent.type === 'special_item_2' ? 1 : 2;
             state.entities.splice(i, 1);
-            onCollectSpecialItem(idx);
+            propsRef.current.onCollectSpecialItem(idx);
             setHudMsg(`Collected: ${ent.displayName}! Proceed to debate the Primal Actor.`);
             continue;
           }
@@ -852,7 +857,7 @@ export function GameCanvas({
             state.player.targetY = state.player.y;
           } else {
             state.primalInteracted = true;
-            onInteractPrimal();
+            propsRef.current.onInteractPrimal();
           }
         }
       }
@@ -860,7 +865,7 @@ export function GameCanvas({
       if (state.hearts <= 0 && !state.dead) {
          state.dead = true;
          setHudMsg("You succumbed to despair. Refresh to try again.");
-         onGameOver();
+         propsRef.current.onGameOver();
       }
       
       if (state.hearts !== state.lastPushedHearts) {
@@ -2245,7 +2250,7 @@ export function GameCanvas({
              logTelemetry(sessionId, 'submission', { reason: 'impossible_challenge', target: 'primal_before_tasks' });
              setHudMsg("The Primal Actor ignores you. Complete your tasks first.");
           } else if (!isUnlocked) {
-             onInteractPrimal();
+             propsRef.current.onInteractPrimal();
           }
         }
         
@@ -2286,7 +2291,7 @@ export function GameCanvas({
       cancelAnimationFrame(animId);
       cvs.removeEventListener('pointerdown', handlePointerDown);
     };
-  }, [worldview, isUnlocked, sessionId, onInteractPrimal, debateAttempt, collectedItems]);
+  }, [worldview, isUnlocked, sessionId, debateAttempt, collectedItems]);
 
   return (
     <div className="relative w-full h-full">
