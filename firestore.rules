@@ -2,10 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /telemetry/{document} {
-      allow create: if true;
+      allow create, read, delete: if true;
     }
     match /victories/{document} {
-      allow create: if true;
+      allow create, read: if true;
     }
   }
 }

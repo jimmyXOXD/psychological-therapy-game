@@ -1254,6 +1254,17 @@ export function GameCanvas({
           }
         }
 
+        // Reaching primal actor before completing tasks -> log submission telemetry
+        if (ent.type === 'primal_actor' && !state.tasksCompleted && dist(state.player, ent) < ent.radius + 35) {
+          if (!ent.hasLoggedSubmissionReach) {
+            ent.hasLoggedSubmissionReach = true;
+            logTelemetry(sessionId, 'submission', { reason: 'primal_reached_before_tasks', interaction: 'proximity_reach' });
+            setHudMsg("The Primal Actor ignores you. Complete your tasks first.");
+          }
+        } else if (ent.type === 'primal_actor' && dist(state.player, ent) > ent.radius + 80) {
+          ent.hasLoggedSubmissionReach = false;
+        }
+
         // Auto-trigger primal actor if close enough and tasks done
         if (ent.type === 'primal_actor' && state.tasksCompleted && !isUnlocked && dist(state.player, ent) < ent.radius + 20 && !state.primalInteracted) {
           if (debateAttempt > 1 && !collectedItems[debateAttempt - 2]) {
@@ -3103,24 +3114,11 @@ export function GameCanvas({
       const worldY = state.player.y + (clickY - rect.height / 2) / CAMERA_ZOOM;
 
       if (e.button === 2) { // Right Click - Act
-        // Subjugation telemetry
-        const nodeStr = `${Math.round(worldX/50)}_${Math.round(worldY/50)}`;
-        if (state.lastClickNode === nodeStr) {
-          state.clickSpam++;
-          if (state.clickSpam > 5) {
-            logTelemetry(sessionId, 'subjugation', { reason: 'spam_right_click', node: nodeStr });
-            state.clickSpam = 0;
-          }
-        } else {
-          state.lastClickNode = nodeStr;
-          state.clickSpam = 1;
-        }
-
         // Check interactions
         const primal = state.entities.find(e => e.id === 'primal_actor');
         if (primal && dist({x: worldX, y: worldY}, primal) < primal.radius + 50) {
           if (!state.tasksCompleted) {
-             logTelemetry(sessionId, 'submission', { reason: 'impossible_challenge', target: 'primal_before_tasks' });
+             logTelemetry(sessionId, 'submission', { reason: 'primal_reached_before_tasks', interaction: 'right_click' });
              setHudMsg("The Primal Actor ignores you. Complete your tasks first.");
           } else if (!isUnlocked) {
              propsRef.current.onInteractPrimal();
