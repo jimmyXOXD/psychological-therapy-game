@@ -56,6 +56,12 @@ function fbm(x: number, y: number) {
   return v;
 }
 
+// Toggle dynamic 2.5D swaying grass blades and movement logic (set to true to re-enable)
+export const ENABLE_DYNAMIC_GRASS = false;
+
+// Max health of the infected flora in the hope minigame (easy to configure)
+export const INFECTED_FLORA_MAX_HP = 10;
+
 export function GameCanvas({ 
   worldview, 
   sessionId, 
@@ -88,6 +94,12 @@ export function GameCanvas({
   const heroWithCatImgRef = useRef<HTMLImageElement | null>(null);
   const caterpillarImgRef = useRef<HTMLImageElement | null>(null);
   const heroWithCaterpillarImgRef = useRef<HTMLImageElement | null>(null);
+  const infectedFloraImgRef = useRef<HTMLImageElement | null>(null);
+  const stumpHoleImgRef = useRef<HTMLImageElement | null>(null);
+  const birdCagedImgRef = useRef<HTMLImageElement | null>(null);
+  const birdUpImgRef = useRef<HTMLImageElement | null>(null);
+  const birdDownImgRef = useRef<HTMLImageElement | null>(null);
+  const birdNestImgRef = useRef<HTMLImageElement | null>(null);
   const grassBladesRef = useRef<any[]>([]);
 
   useEffect(() => {
@@ -131,6 +143,30 @@ export function GameCanvas({
     i10.src = '/hero_with_caterpillar.png';
     i10.onload = () => { heroWithCaterpillarImgRef.current = i10; };
 
+    const i11 = new Image();
+    i11.src = '/infected_flora.png';
+    i11.onload = () => { infectedFloraImgRef.current = i11; };
+
+    const i12 = new Image();
+    i12.src = '/stump_hole.png';
+    i12.onload = () => { stumpHoleImgRef.current = i12; };
+
+    const iBirdCaged = new Image();
+    iBirdCaged.src = '/bird_caged.png';
+    iBirdCaged.onload = () => { birdCagedImgRef.current = iBirdCaged; };
+
+    const iBirdUp = new Image();
+    iBirdUp.src = '/bird_up.png';
+    iBirdUp.onload = () => { birdUpImgRef.current = iBirdUp; };
+
+    const iBirdDown = new Image();
+    iBirdDown.src = '/bird_down.png';
+    iBirdDown.onload = () => { birdDownImgRef.current = iBirdDown; };
+
+    const iBirdNest = new Image();
+    iBirdNest.src = '/bird_nest.png';
+    iBirdNest.onload = () => { birdNestImgRef.current = iBirdNest; };
+
     // Generate static perlin noise background
     const cvs = document.createElement('canvas');
     const size = 300; 
@@ -159,56 +195,58 @@ export function GameCanvas({
     }
 
     // Generate dense, beautifully styled grass blades/quads
-    const blades: any[] = [];
-    const totalBlades = 15000;
-    const CENTER = 3000;
-    for (let i = 0; i < totalBlades; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      // Distribute organically across the play arena (with a radius of up to 2800)
-      const distVal = Math.pow(Math.random(), 1.25) * 2800;
-      const gx = CENTER + Math.cos(angle) * distVal;
-      const gy = CENTER + Math.sin(angle) * distVal;
+    if (ENABLE_DYNAMIC_GRASS) {
+      const blades: any[] = [];
+      const totalBlades = 15000;
+      const CENTER = 3000;
+      for (let i = 0; i < totalBlades; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        // Distribute organically across the play arena (with a radius of up to 2800)
+        const distVal = Math.pow(Math.random(), 1.25) * 2800;
+        const gx = CENTER + Math.cos(angle) * distVal;
+        const gy = CENTER + Math.sin(angle) * distVal;
 
-      const nVal = fbm(gx * 0.005, gy * 0.005);
-      
-      // Select organic green color palettes matching noise thresholds
-      let color = '#15803d';
-      if (nVal < 0.35) {
-        color = '#14532d'; // cool/dark shadow forest green
-      } else if (nVal < 0.5) {
-        color = '#166534'; // deep emerald
-      } else if (nVal < 0.65) {
-        color = '#15803d'; // lush green
-      } else if (nVal < 0.8) {
-        color = '#1b9a55'; // warm vibrant grass green
-      } else {
-        color = '#84cc16'; // bright yellow-green accent
+        const nVal = fbm(gx * 0.005, gy * 0.005);
+        
+        // Select organic green color palettes matching noise thresholds
+        let color = '#15803d';
+        if (nVal < 0.35) {
+          color = '#14532d'; // cool/dark shadow forest green
+        } else if (nVal < 0.5) {
+          color = '#166534'; // deep emerald
+        } else if (nVal < 0.65) {
+          color = '#15803d'; // lush green
+        } else if (nVal < 0.8) {
+          color = '#1b9a55'; // warm vibrant grass green
+        } else {
+          color = '#84cc16'; // bright yellow-green accent
+        }
+
+        const hash = hash2d(gx, gy);
+        let accentType = 'none';
+        if (hash < 0.04) {
+          accentType = 'buttercup'; // distinct yellow accent flowers
+        } else if (hash < 0.09) {
+          accentType = 'clover'; // clover patches surrounding the base
+        } else if (hash < 0.16) {
+          accentType = 'long'; // dual long blades of grass
+        }
+
+        const height = 11 + Math.floor(hash2d(gy, gx) * 8);
+
+        blades.push({
+          x: gx,
+          y: gy,
+          height,
+          color,
+          accentType,
+          noiseVal: nVal
+        });
       }
-
-      const hash = hash2d(gx, gy);
-      let accentType = 'none';
-      if (hash < 0.04) {
-        accentType = 'buttercup'; // distinct yellow accent flowers
-      } else if (hash < 0.09) {
-        accentType = 'clover'; // clover patches surrounding the base
-      } else if (hash < 0.16) {
-        accentType = 'long'; // dual long blades of grass
-      }
-
-      const height = 11 + Math.floor(hash2d(gy, gx) * 8);
-
-      blades.push({
-        x: gx,
-        y: gy,
-        height,
-        color,
-        accentType,
-        noiseVal: nVal
-      });
+      // Sort blades by Y coordinate for perfect 2.5D depth sorted rendering
+      blades.sort((a, b) => a.y - b.y);
+      grassBladesRef.current = blades;
     }
-    // Sort blades by Y coordinate for perfect 2.5D depth sorted rendering
-    blades.sort((a, b) => a.y - b.y);
-    grassBladesRef.current = blades;
   }, []);
 
   useEffect(() => {
@@ -246,7 +284,10 @@ export function GameCanvas({
       hasCat: false,
       hasCaterpillar: false,
       invincibilityTimer: 0,
-      subjugationSplashes: [] as { x: number, y: number, radius: number }[]
+      subjugationSplashes: [] as { x: number, y: number, radius: number, color?: string }[],
+      hasPointer: false,
+      pointerScreenX: 0,
+      pointerScreenY: 0
     };
 
     const spawnEntities = () => {
@@ -295,12 +336,19 @@ export function GameCanvas({
           }
           setHudMsg("Task: Collect 5 peace coins");
         } else {
-          state.taskMax = 1; // just reach center
-          for(let i=0; i<50; i++) {
-            const p = getRandomPos();
-            state.entities.push({ type: 'task_mine', x: p.x, y: p.y, radius: 15 });
-          }
-          setHudMsg("Task: Reach center while avoiding mines");
+          state.taskMax = 3;
+          state.entities.push({
+            id: 'dissatisfaction_hole',
+            type: 'task_dissatisfaction_hole',
+            x: CENTER - 40,
+            y: CENTER - 80,
+            radius: 40,
+            fadeAlpha: 1.0,
+            fading: false,
+            escapes: 0,
+            isStable: false
+          });
+          setHudMsg("Task: Reach the rabbit hole to escape dissatisfaction");
         }
       } else if (need === 'wonder') {
         if (type === 'need') {
@@ -349,26 +397,69 @@ export function GameCanvas({
           }
           setHudMsg("Task: Find the true glowing marking and collect mushrooms in its color order");
         } else {
+          // Pain of Uncertainty: Push the lost bird back to its nest near the center
           state.taskMax = 1;
           const p = getRandomPos();
-          state.entities.push({ id: 'push_cat', type: 'task_push_cat', x: p.x, y: p.y, radius: 25 });
-          setHudMsg("Task: Push the idle cat to the center of the map");
+          state.entities.push({
+            id: 'bird_nest',
+            type: 'task_bird_nest',
+            x: CENTER + 75,
+            y: CENTER + 35,
+            radius: 30,
+            isDecoration: true
+          });
+          state.entities.push({
+            id: 'push_bird',
+            type: 'task_push_bird',
+            x: p.x,
+            y: p.y,
+            radius: 25,
+            flapTimer: 0,
+            facing: 1,
+            wingState: 'up'
+          });
+          setHudMsg("Task: Push the lost bird back to its nest near the center of the map");
         }
       } else if (need === 'hope') {
         if (type === 'need') {
+          // Need of Hope: Destroy infected flora
           state.taskMax = 3;
-          for(let i=0; i<3; i++) {
+          for (let i = 0; i < 3; i++) {
             const p = getRandomPos();
-            state.entities.push({ id: `fight_${i}`, type: 'task_fight', x: p.x, y: p.y, radius: 20, hp: 3 });
+            state.entities.push({ 
+              id: `infected_flora_${i}`, 
+              type: 'task_infected_flora', 
+              x: p.x, 
+              y: p.y, 
+              radius: 48, 
+              hp: INFECTED_FLORA_MAX_HP,
+              maxHp: INFECTED_FLORA_MAX_HP 
+            });
           }
-          setHudMsg("Task: Win 3 fights (Right-click spam)");
+          setHudMsg("Task: Destroy 3 infected flora to bring hope to the forest (Right-Click)");
         } else {
-          state.taskMax = 3;
-          for(let i=0; i<3; i++) {
-            const p = getRandomPos();
-            state.entities.push({ id: `dodge_${i}`, type: 'task_dodge', x: p.x, y: p.y, radius: 20, timer: 10 });
-          }
-          setHudMsg("Task: Survive 3 dodge arenas");
+          // Pain of Physical Pain: Spreading Forest Fire
+          state.taskMax = 1;
+          const origins = [
+            { angle: 0, r: 720 },
+            { angle: Math.PI * 0.5, r: 720 },
+            { angle: Math.PI, r: 720 },
+            { angle: Math.PI * 1.5, r: 720 }
+          ];
+
+          origins.forEach((origin, oIdx) => {
+            const fx = CENTER + Math.cos(origin.angle) * origin.r;
+            const fy = CENTER + Math.sin(origin.angle) * origin.r;
+            state.entities.push({
+              id: `forest_fire_init_${oIdx}`,
+              type: 'task_forest_fire',
+              x: fx,
+              y: fy,
+              radius: 26,
+              spreadTimer: 2.5 + Math.random() * 2.0
+            });
+          });
+          setHudMsg("Task: Extinguish all forest fires! The flames multiply and creep inward toward the center.");
         }
       } else if (need === 'attention') {
         if (type === 'need') {
@@ -384,35 +475,72 @@ export function GameCanvas({
           }
           setHudMsg("Task: Check the center marking and collect mushrooms in that color order");
         } else {
-          state.taskMax = 10;
-          state.taskState.lastDir = '';
-          // trap player
-          state.player.x = CENTER; state.player.y = CENTER; state.player.targetX = CENTER; state.player.targetY = CENTER;
-          state.entities.push({ id: 'prison_door', type: 'task_prison', x: CENTER, y: CENTER + 150, radius: 40 });
-          setHudMsg("Task: Escape prison using alternating L/R clicks on door");
+          // Pain of Imprisonment: Free the caged birds
+          state.taskMax = 5;
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.45;
+            const r = 350 + Math.random() * (INNER_RADIUS - 600);
+            state.entities.push({
+              id: `caged_bird_${i}`,
+              type: 'task_caged_bird',
+              x: CENTER + Math.cos(a) * r,
+              y: CENTER + Math.sin(a) * r,
+              radius: 25,
+              isReleased: false,
+              flightPhase: Math.random() * Math.PI * 2,
+              orbitRadius: 35 + Math.random() * 35,
+              orbitSpeed: 1.6 + Math.random() * 1.4,
+              flapTimer: Math.random() * 0.22,
+              facing: 1
+            });
+          }
+          setHudMsg("Task: Free 5 caged birds from imprisonment (0/5)");
         }
       } else if (need === 'privacy') {
         if (type === 'need') {
-          state.taskTimer = 30;
-          state.taskMax = 1;
-          state.entities.push({ type: 'task_thief', x: CENTER - 200, y: CENTER - 200, speed: 130, radius: 15 });
-          setHudMsg("Task: Avoid the thief for 30 seconds");
-        } else {
-          state.taskMax = 5;
-          state.taskState.stash = 0;
-          state.entities.push({ id: 'stash', type: 'task_stash', x: CENTER, y: CENTER + 150, radius: 30 });
-          for(let i=0; i<15; i++) {
-            const p = getRandomPos();
-            state.entities.push({ id: `stashcoin_${i}`, type: 'task_coin', x: p.x, y: p.y, radius: 10 });
+          // Forest Illness Cleansing (Protecting Sovereignty)
+          state.taskMax = 8;
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.45;
+            const r = 350 + Math.random() * (INNER_RADIUS - 550);
+            state.entities.push({
+              id: `illness_stain_${i}`,
+              type: 'task_illness_stain',
+              x: CENTER + Math.cos(a) * r,
+              y: CENTER + Math.sin(a) * r,
+              radius: 32
+            });
           }
-          state.entities.push({ type: 'task_thief_stealer', x: CENTER - 200, y: CENTER - 200, speed: 100, radius: 15 });
-          setHudMsg("Task: Hoard 5 coins in stash before thief steals them");
+          setHudMsg("Task: Cleanse 8 forest illness stains to protect forest sovereignty (0/8)");
+        } else {
+          // Creeping Illness Defense (Pain of Change)
+          state.taskMax = 10;
+          state.player.x = CENTER;
+          state.player.y = CENTER + 120;
+          state.player.targetX = CENTER;
+          state.player.targetY = CENTER + 120;
+
+          for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+            const r = 520 + (i % 3) * 110 + Math.random() * 80;
+            state.entities.push({
+              id: `creeping_illness_${i}`,
+              type: 'task_creeping_illness',
+              x: CENTER + Math.cos(a) * r,
+              y: CENTER + Math.sin(a) * r,
+              speed: 38 + Math.random() * 8,
+              radius: 28
+            });
+          }
+          setHudMsg("Task: Defend the rabbit hole! Eliminate 10 creeping illness threats (0/10)");
         }
       }
       
       // Primal Actor Destination
       state.entities.push({ id: 'primal_actor', type: 'primal_actor', x: CENTER, y: CENTER, radius: 50 });
-      state.entities.push({ id: 'rabbit_hole', type: 'rabbit_hole', x: CENTER - 40, y: CENTER -80, radius: 40 });
+      if (!(need === 'peace' && type === 'pain')) {
+        state.entities.push({ id: 'rabbit_hole', type: 'rabbit_hole', x: CENTER - 40, y: CENTER -80, radius: 40 });
+      }
 
       // Spawn repeating attempt special items near player paths
       if (debateAttempt === 2 && !collectedItems[0]) {
@@ -455,7 +583,12 @@ export function GameCanvas({
         
         // Avoid starting area and primal actor center area, and keep inside circular map
         const distToStart = Math.hypot(tx - (CENTER - 500), ty - (CENTER - 500));
-        if (distToStart > 180 && distFromCenter > 180 && distFromCenter < OUTSKIRTS_RADIUS) {
+        // Keep clear of any forest illness stains, creeping threats, caged birds, forest fires, and bird nests
+        const nearObstacle = state.entities.some(e => 
+          (e.type === 'task_illness_stain' || e.type === 'task_creeping_illness' || e.type === 'task_caged_bird' || e.type === 'task_forest_fire' || e.type === 'task_push_bird' || e.type === 'task_bird_nest') && 
+          Math.hypot(tx - e.x, ty - e.y) < 130
+        );
+        if (!nearObstacle && distToStart > 180 && distFromCenter > 180 && distFromCenter < OUTSKIRTS_RADIUS) {
           state.entities.push({
             id: `tree_${i}`,
             type: Math.random() > 0.45 ? 'tree_scary' : 'tree_oak',
@@ -481,26 +614,29 @@ export function GameCanvas({
         });
       }
 
-      // Spawn decorative glowing mushrooms across the map
-      for (let i = 0; i < 150; i++) {
-        const mx = Math.random() * MAP_SIZE;
-        const my = Math.random() * MAP_SIZE;
-        const distFromCenter = Math.hypot(mx - CENTER, my - CENTER);
-        const distToStart = Math.hypot(mx - (CENTER - 500), my - (CENTER - 500));
-        
-        if (distToStart > 120 && distFromCenter < OUTSKIRTS_RADIUS) {
-          const colors = ['blue', 'purple', 'yellow'];
-          const color = colors[Math.floor(Math.random() * colors.length)];
-          state.entities.push({
-            id: `decor_mushroom_${i}`,
-            type: 'decor_mushroom',
-            x: mx,
-            y: my,
-            radius: 8 + Math.random() * 8,
-            scale: 0.6 + Math.random() * 0.8,
-            color: color,
-            isDecoration: true
-          });
+      // Spawn decorative glowing mushrooms across the map (omitted during certainty or attention mushroom collecting tasks to avoid confusion)
+      const hasMushroomTask = (need === 'certainty' || need === 'attention') && type === 'need';
+      if (!hasMushroomTask) {
+        for (let i = 0; i < 150; i++) {
+          const mx = Math.random() * MAP_SIZE;
+          const my = Math.random() * MAP_SIZE;
+          const distFromCenter = Math.hypot(mx - CENTER, my - CENTER);
+          const distToStart = Math.hypot(mx - (CENTER - 500), my - (CENTER - 500));
+          
+          if (distToStart > 120 && distFromCenter < OUTSKIRTS_RADIUS) {
+            const colors = ['blue', 'purple', 'yellow'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            state.entities.push({
+              id: `decor_mushroom_${i}`,
+              type: 'decor_mushroom',
+              x: mx,
+              y: my,
+              radius: 8 + Math.random() * 8,
+              scale: 0.6 + Math.random() * 0.8,
+              color: color,
+              isDecoration: true
+            });
+          }
         }
       }
 
@@ -567,6 +703,24 @@ export function GameCanvas({
       if (!state.outskirtsLogged && distFromCenterPlayer > INNER_RADIUS) {
         logTelemetry(sessionId, 'avoidance', { reason: 'reached_outskirts', x: state.player.x, y: state.player.y });
         state.outskirtsLogged = true;
+      }
+
+      // Automatic mouse-following player movement
+      if (state.hasPointer && cvs.width > 0 && cvs.height > 0) {
+        const screenCenterX = cvs.width / 2;
+        const screenCenterY = cvs.height / 2;
+        const screenDx = state.pointerScreenX - screenCenterX;
+        const screenDy = state.pointerScreenY - screenCenterY;
+        const screenDist = Math.hypot(screenDx, screenDy);
+
+        const DEADZONE = 12; // screen pixels deadzone around hero to prevent jitter
+        if (screenDist > DEADZONE) {
+          state.player.targetX = state.player.x + screenDx / CAMERA_ZOOM;
+          state.player.targetY = state.player.y + screenDy / CAMERA_ZOOM;
+        } else {
+          state.player.targetX = state.player.x;
+          state.player.targetY = state.player.y;
+        }
       }
 
       // Player Movement
@@ -723,23 +877,113 @@ export function GameCanvas({
           }
         }
 
-        // Task Timers
-        if (worldview.fundamentalNeed === 'privacy' && worldview.needType === 'need') {
-          if (ent.type === 'task_thief') {
-            const edx = state.player.x - ent.x;
-            const edy = state.player.y - ent.y;
-            const ed = Math.hypot(edx, edy);
-            if (ed > 0) {
-              ent.x += (edx/ed) * ent.speed * dt;
-              ent.y += (edy/ed) * ent.speed * dt;
+        // Flying liberated birds following the player
+        if (ent.type === 'task_caged_bird' && ent.isReleased) {
+          ent.flapTimer = (ent.flapTimer || 0) + dt;
+          const FLAP_CYCLE = 0.22;
+          const cycleProgress = (ent.flapTimer % FLAP_CYCLE) / FLAP_CYCLE;
+          // Downstroke (climb) when cycleProgress < 0.5, upstroke (recovery) when >= 0.5
+          ent.wingState = cycleProgress < 0.5 ? 'down' : 'up';
+
+          ent.flightPhase = (ent.flightPhase || 0) + dt * (ent.orbitSpeed || 2.0);
+          
+          // Fluttering offset relative to player in graceful orbits
+          const timeSec = performance.now() / 1000;
+          const charCode = ent.id ? ent.id.charCodeAt(ent.id.length - 1) : 0;
+          const hoverOffsetX = Math.cos(ent.flightPhase) * (ent.orbitRadius || 45) + Math.sin(timeSec * 3 + charCode) * 20;
+          const hoverOffsetY = -35 + Math.sin(ent.flightPhase * 1.2) * ((ent.orbitRadius || 45) * 0.55) + Math.cos(timeSec * 2.5 + charCode) * 15;
+          
+          const targetX = state.player.x + hoverOffsetX;
+          const targetY = state.player.y + hoverOffsetY;
+          
+          const fdx = targetX - ent.x;
+          const fdy = targetY - ent.y;
+          const fdist = Math.hypot(fdx, fdy);
+          
+          const flySpeed = Math.min(340, Math.max(130, fdist * 3.5));
+          if (fdist > 3) {
+            ent.x += (fdx / fdist) * flySpeed * dt;
+            ent.y += (fdy / fdist) * flySpeed * dt;
+            if (Math.abs(fdx) > 1.5) {
+              ent.facing = fdx > 0 ? 1 : -1;
             }
-            const thiefDist = Math.hypot(ent.x - CENTER, ent.y - CENTER);
-            if (thiefDist > INNER_RADIUS) {
-              const angle = Math.atan2(ent.y - CENTER, ent.x - CENTER);
-              ent.x = CENTER + Math.cos(angle) * INNER_RADIUS;
-              ent.y = CENTER + Math.sin(angle) * INNER_RADIUS;
+          }
+        }
+        // Spreading Forest Fire: stationary flames that multiply inward towards the center
+        if (ent.type === 'task_forest_fire') {
+          const cdx = CENTER - ent.x;
+          const cdy = CENTER - ent.y;
+          const cd = Math.hypot(cdx, cdy);
+
+          // Scorches center sacred grove if fire reaches center
+          if (cd < 60) {
+            ent.scorchTimer = (ent.scorchTimer || 0) + dt;
+            if (ent.scorchTimer > 2.0) {
+              ent.scorchTimer = 0;
+              tryTakeDamage();
+              setHudMsg("Fire has reached the center sacred grove! Extinguish the flames!");
             }
-            if (dist(state.player, ent) < 20) tryTakeDamage();
+          }
+
+          // Multiply towards the center every few seconds
+          ent.spreadTimer = (ent.spreadTimer || (3.5 + Math.random() * 2.5)) - dt;
+          if (ent.spreadTimer <= 0) {
+            ent.spreadTimer = 4.5 + Math.random() * 3.0; // Reset spread interval
+
+            const currentFires = state.entities.filter(e => e.type === 'task_forest_fire');
+            if (currentFires.length < 28 && cd > 55) {
+              // Base direction pointing toward the center
+              const baseAngle = Math.atan2(cdy, cdx);
+              // Slight organic angle variation: +/- 32 degrees (+/- 0.55 radians) to avoid linear lines
+              const angleVariation = (Math.random() - 0.5) * 1.1;
+              const spreadAngle = baseAngle + angleVariation;
+
+              // Step forward towards the center: 48 to 72 units
+              const stepDist = 48 + Math.random() * 24;
+              const newX = ent.x + Math.cos(spreadAngle) * stepDist;
+              const newY = ent.y + Math.sin(spreadAngle) * stepDist;
+
+              // Avoid overlapping an existing fire too closely
+              const tooClose = state.entities.some(e => e.type === 'task_forest_fire' && Math.hypot(e.x - newX, e.y - newY) < 32);
+              if (!tooClose) {
+                state.entities.push({
+                  id: `forest_fire_${Date.now()}_${Math.random()}`,
+                  type: 'task_forest_fire',
+                  x: newX,
+                  y: newY,
+                  radius: 26,
+                  spreadTimer: 3.2 + Math.random() * 2.5
+                });
+              }
+            }
+          }
+
+          // Physical pain damage if walking directly into roaring core without dousing
+          if (dist(state.player, ent) < ent.radius - 6) {
+            tryTakeDamage();
+          }
+        }
+        if (ent.type === 'task_creeping_illness') {
+          const holeX = CENTER - 40;
+          const holeY = CENTER - 80;
+          const hdx = holeX - ent.x;
+          const hdy = holeY - ent.y;
+          const hd = Math.hypot(hdx, hdy);
+
+          if (hd > 0) {
+            ent.x += (hdx / hd) * (ent.speed || 38) * dt;
+            ent.y += (hdy / hd) * (ent.speed || 38) * dt;
+          }
+
+          // Threat reached the rabbit hole
+          if (hd < 48) {
+            tryTakeDamage();
+            setHudMsg("A creeping illness reached the rabbit hole! Defend the tree!");
+            // Reposition threat to outer perimeter so player must still eliminate the total required
+            const respawnAngle = Math.random() * Math.PI * 2;
+            const respawnR = 680 + Math.random() * 120;
+            ent.x = CENTER + Math.cos(respawnAngle) * respawnR;
+            ent.y = CENTER + Math.sin(respawnAngle) * respawnR;
           }
         }
         
@@ -788,6 +1032,69 @@ export function GameCanvas({
               state.entities.splice(i, 1);
             }
           }
+          if (ent.type === 'task_forest_fire') {
+            if (dist(state.player, ent) < ent.radius + 14) {
+              state.taskProgress++;
+              state.subjugationSplashes.push({
+                x: ent.x,
+                y: ent.y,
+                radius: 38,
+                color: 'rgba(56, 189, 248, 0.6)'
+              });
+              state.entities.splice(i, 1);
+              const remainingFires = state.entities.filter(e => e.type === 'task_forest_fire').length;
+              if (remainingFires === 0) {
+                state.tasksCompleted = true;
+                setTasksDone(true);
+                setHudMsg("All forest fires extinguished! The forest is saved. Approach and Right-Click the Primal Actor.");
+              } else {
+                setHudMsg(`Fire extinguished! ${remainingFires} active fires remaining.`);
+              }
+              continue;
+            }
+          }
+          if (ent.type === 'task_caged_bird' && !ent.isReleased) {
+            if (dist(state.player, ent) < ent.radius + 18) {
+              ent.isReleased = true;
+              state.taskProgress++;
+              state.subjugationSplashes.push({
+                x: ent.x,
+                y: ent.y,
+                radius: 40
+              });
+              if (state.taskProgress >= state.taskMax) {
+                setHudMsg("All imprisoned birds set free! Sovereignty reclaimed. Approach and Right-Click the Primal Actor.");
+              } else {
+                setHudMsg(`Bird freed from cage! (${state.taskProgress}/${state.taskMax})`);
+              }
+            }
+          }
+          if (ent.type === 'task_illness_stain') {
+            if (dist(state.player, ent) < ent.radius + 15) {
+              state.taskProgress++;
+              state.subjugationSplashes.push({
+                x: ent.x,
+                y: ent.y,
+                radius: 38
+              });
+              state.entities.splice(i, 1);
+              setHudMsg(`Illness stain cleansed! Sovereignty restored (${state.taskProgress}/${state.taskMax})`);
+              continue;
+            }
+          }
+          if (ent.type === 'task_creeping_illness') {
+            if (dist(state.player, ent) < ent.radius + 18) {
+              state.taskProgress++;
+              state.subjugationSplashes.push({
+                x: ent.x,
+                y: ent.y,
+                radius: 38
+              });
+              state.entities.splice(i, 1);
+              setHudMsg(`Creeping illness eliminated! Rabbit hole defended (${state.taskProgress}/${state.taskMax})`);
+              continue;
+            }
+          }
           if (ent.type === 'task_wonder_hole') {
             if (dist(state.player, ent) < ent.radius + 15) {
               if (ent.hasKey) {
@@ -815,17 +1122,44 @@ export function GameCanvas({
               state.entities.splice(i, 1);
             }
           }
-          if (ent.type === 'task_push_cat') {
-            const d = dist(state.player, ent);
-            if (d < ent.radius + 40) {
-               const dx = ent.x - state.player.x;
-               const dy = ent.y - state.player.y;
-               const len = Math.hypot(dx, dy) || 1;
-               ent.x += (dx/len) * 200 * dt;
-               ent.y += (dy/len) * 200 * dt;
-            }
-            if (Math.hypot(ent.x - CENTER, ent.y - CENTER) < 100) {
-               state.taskProgress = 1; // Done
+          if (ent.type === 'task_push_cat' || ent.type === 'task_push_bird') {
+            const nest = state.entities.find(e => e.type === 'task_bird_nest');
+            const targetX = nest ? nest.x : CENTER;
+            const targetY = nest ? nest.y : CENTER;
+
+            if (ent.isHome) {
+              // Stay safely positioned on top of the nest
+              ent.x = targetX;
+              ent.y = targetY - 4;
+            } else {
+              const d = dist(state.player, ent);
+              let isMoving = false;
+              if (d < ent.radius + 40) {
+                 const dx = ent.x - state.player.x;
+                 const dy = ent.y - state.player.y;
+                 const len = Math.hypot(dx, dy) || 1;
+                 ent.x += (dx/len) * 200 * dt;
+                 ent.y += (dy/len) * 200 * dt;
+                 if (Math.abs(dx) > 1.5) {
+                   ent.facing = dx > 0 ? 1 : -1;
+                 }
+                 isMoving = true;
+              }
+
+              // Wing flap animation (faster flapping when pushed)
+              ent.flapTimer = (ent.flapTimer || 0) + dt * (isMoving ? 1.6 : 0.8);
+              const FLAP_CYCLE = isMoving ? 0.18 : 0.26;
+              const cycleProgress = (ent.flapTimer % FLAP_CYCLE) / FLAP_CYCLE;
+              ent.wingState = cycleProgress < 0.5 ? 'down' : 'up';
+
+              // Check if bird reached nest near center
+              if (Math.hypot(ent.x - targetX, ent.y - targetY) < 65) {
+                 ent.isHome = true;
+                 ent.x = targetX;
+                 ent.y = targetY - 4;
+                 state.taskProgress = 1; // Done!
+                 setHudMsg("The lost bird safely reached its nest! Approach and Right-Click the Primal Actor.");
+              }
             }
           }
           if (ent.type === 'task_mine') {
@@ -834,13 +1168,90 @@ export function GameCanvas({
                state.entities.splice(i, 1);
             }
           }
+          if (ent.type === 'task_infected_flora' || ent.type === 'task_fight') {
+            if (dist(state.player, ent) < ent.radius + 12) {
+               tryTakeDamage();
+               setHudMsg("Intoxicated by infected flora! Purge them with Right-Click before approaching.");
+            }
+          }
+          if (ent.type === 'task_dissatisfaction_hole') {
+            if (ent.fading === 'out') {
+              ent.fadeAlpha = Math.max(0, (ent.fadeAlpha ?? 1) - dt * 2.5);
+              if (ent.fadeAlpha <= 0) {
+                ent.escapes = (ent.escapes || 0) + 1;
+                state.taskProgress = ent.escapes;
+
+                if (ent.escapes >= 3) {
+                  // Final true rabbit hole appears back at the usual spot next to the primal actor
+                  ent.x = CENTER - 40;
+                  ent.y = CENTER - 80;
+                  ent.isFinal = true;
+                  ent.fading = 'in';
+                  setHudMsg("The true rabbit hole has manifested back by the Primal Actor! Return to the center.");
+                } else {
+                  // Move to new random position within INNER_RADIUS at least 400 away from player
+                  let newX = CENTER;
+                  let newY = CENTER;
+                  for (let attempt = 0; attempt < 35; attempt++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const r = 250 + Math.random() * (INNER_RADIUS - 400);
+                    const candidateX = CENTER + Math.cos(a) * r;
+                    const candidateY = CENTER + Math.sin(a) * r;
+                    if (Math.hypot(candidateX - state.player.x, candidateY - state.player.y) > 400) {
+                      newX = candidateX;
+                      newY = candidateY;
+                      break;
+                    }
+                  }
+                  ent.x = newX;
+                  ent.y = newY;
+                  ent.fading = 'in';
+                  if (ent.escapes === 1) {
+                    setHudMsg("The exit vanished into thin air! Dissatisfaction lingers... Search the forest. (1/3)");
+                  } else if (ent.escapes === 2) {
+                    setHudMsg("An illusion again! The rabbit hole slipped away... Keep searching. (2/3)");
+                  }
+                }
+              }
+            } else if (ent.fading === 'in') {
+              ent.fadeAlpha = Math.min(1, (ent.fadeAlpha ?? 0) + dt * 3.0);
+              if (ent.fadeAlpha >= 1) {
+                ent.fadeAlpha = 1;
+                ent.fading = false;
+              }
+            } else if (!state.tasksCompleted) {
+              if (dist(state.player, ent) < ent.radius + 15) {
+                if (ent.isFinal) {
+                  // Player reached the final true rabbit hole back at the primal actor
+                  ent.isStable = true;
+                  state.tasksCompleted = true;
+                  setTasksDone(true);
+                  setHudMsg("You reached the true rabbit hole! Approach and Right-Click the Primal Actor.");
+                } else {
+                  ent.fading = 'out';
+                  setHudMsg("It's fading away before your eyes!");
+                }
+              }
+            }
+          }
         }
 
         // Evaluate task completion
-        if (state.taskProgress >= state.taskMax && !state.tasksCompleted) {
-          state.tasksCompleted = true;
-          setTasksDone(true);
-          setHudMsg("Tasks complete. Approach and Right-Click the Primal Actor.");
+        if (!state.tasksCompleted) {
+          const hasForestFire = state.entities.some(e => e.type === 'task_forest_fire');
+          const isPhysicalPainTask = worldview.needType === 'pain' && worldview.fundamentalNeed === 'hope';
+          
+          if (isPhysicalPainTask) {
+            if (!hasForestFire) {
+              state.tasksCompleted = true;
+              setTasksDone(true);
+              setHudMsg("All forest fires extinguished! The forest is saved. Approach and Right-Click the Primal Actor.");
+            }
+          } else if (state.taskProgress >= state.taskMax) {
+            state.tasksCompleted = true;
+            setTasksDone(true);
+            setHudMsg("Tasks complete. Approach and Right-Click the Primal Actor.");
+          }
         }
 
         // Auto-trigger primal actor if close enough and tasks done
@@ -1557,27 +1968,106 @@ export function GameCanvas({
         }
 
       } else if (ent.type === 'task_wonder_hole') {
-        if (rabbitHoleImgRef.current) {
-          const img = rabbitHoleImgRef.current;
-          const h = 200;
-          const w = h * (img.width / img.height);
+        const img = stumpHoleImgRef.current || rabbitHoleImgRef.current;
+        if (img) {
+          const h = 50;
+          const w = h * (img.width / img.height || 1);
           ctx.save();
           ctx.shadowBlur = 30;
           ctx.shadowColor = '#d946ef';
           ctx.drawImage(img, -w / 2, -h / 2, w, h);
           ctx.restore();
         }
-      } else if (ent.type === 'task_push_cat') {
-        if (cheshireCatImgRef.current) {
-          const img = cheshireCatImgRef.current;
-          const h = 100;
-          const w = h * (img.width / img.height);
+      } else if (ent.type === 'task_dissatisfaction_hole') {
+        const img = rabbitHoleImgRef.current;
+        if (img) {
+          const alpha = ent.fadeAlpha !== undefined ? ent.fadeAlpha : 1.0;
           ctx.save();
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = '#00a8ff';
+          ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+          const h = 200;
+          const w = h * (img.width / img.height || 1);
           ctx.drawImage(img, -w / 2, -h / 2, w, h);
           ctx.restore();
         }
+      } else if (ent.type === 'task_push_cat' || ent.type === 'task_push_bird') {
+        if (ent.isHome) {
+          // Bird resting safely on top of its nest
+          ctx.save();
+          const img = birdUpImgRef.current;
+          if (img && img.complete && img.naturalWidth > 0) {
+            const h = 42;
+            const w = h * (img.width / img.height || 1);
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = '#38bdf8';
+            ctx.drawImage(img, -w / 2, -h / 2 - 8, w, h);
+          } else {
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.ellipse(0, -8, 12, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+          return;
+        }
+
+        // Flight shadow on the ground
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath();
+        ctx.ellipse(0, 30, 12, 4.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        // Horizontal flip based on pushing/flight direction
+        if (ent.facing === -1) {
+          ctx.scale(-1, 1);
+        }
+
+        // Gentle banking tilt during wing stroke
+        const tilt = (ent.facing || 1) * (ent.wingState === 'down' ? -0.1 : 0.08);
+        ctx.rotate(tilt);
+
+        const img = ent.wingState === 'down' ? birdDownImgRef.current : birdUpImgRef.current;
+        if (img && img.complete && img.naturalWidth > 0) {
+          const h = 44;
+          const w = h * (img.width / img.height || 1);
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#38bdf8';
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        } else {
+          // Procedural bird fallback
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      } else if (ent.type === 'task_bird_nest') {
+        // Shadow under nest
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0, 12, 28, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        if (birdNestImgRef.current && birdNestImgRef.current.complete && birdNestImgRef.current.naturalWidth > 0) {
+          const img = birdNestImgRef.current;
+          const h = 56;
+          const w = h * (img.width / img.height || 1);
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = '#f59e0b';
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        } else {
+          // Procedural twig nest fallback
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 24, 12, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#451a03';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+        ctx.restore();
       } else if (ent.type === 'task_marking') {
         ctx.save();
         if (ent.isTrue) {
@@ -1823,6 +2313,334 @@ export function GameCanvas({
         ctx.restore();
         ctx.shadowBlur = 0;
 
+      } else if (ent.type === 'task_infected_flora' || ent.type === 'task_fight' || ent.type === 'task_dodge') {
+        const pulse = Math.sin(time * 0.004 + ent.x) * 0.08 + 1;
+        const bob = Math.sin(time * 0.003 + ent.y) * 2;
+
+        // Toxic blight pool on ground (scaled up to match twice-size flora)
+        ctx.fillStyle = 'rgba(59, 7, 100, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(0, 32, 48 * pulse, 18 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Intoxicating spore rings expanding outward
+        const ringTime = (time * 0.0015 + (ent.id ? ent.id.charCodeAt(ent.id.length - 1) : 0)) % 1;
+        ctx.strokeStyle = `rgba(168, 85, 247, ${0.4 * (1 - ringTime)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 32, (48 + ringTime * 60), (18 + ringTime * 25), 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(0, bob);
+
+        if (infectedFloraImgRef.current && infectedFloraImgRef.current.complete && infectedFloraImgRef.current.naturalWidth > 0) {
+          const img = infectedFloraImgRef.current;
+          // Twice the size of the hero (hero = 70, flora = 140)
+          const h = 140 * pulse;
+          const w = h * (img.width / img.height || 1);
+          ctx.shadowBlur = 24;
+          ctx.shadowColor = '#a855f7';
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        } else {
+          // Fallback infected flora twice hero size
+          ctx.shadowBlur = 22;
+          ctx.shadowColor = '#c084fc';
+          ctx.fillStyle = '#4c1d95';
+          ctx.beginPath();
+          ctx.arc(0, 0, 36 * pulse, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Toxic bulb nodules
+          ctx.fillStyle = '#a855f7';
+          for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+            const bx = Math.cos(a + time * 0.002) * 32 * pulse;
+            const by = Math.sin(a + time * 0.002) * 32 * pulse;
+            ctx.beginPath();
+            ctx.arc(bx, by, 9, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Poison core
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(0, 0, 14, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+
+        // Floating intoxication spores around the flora
+        for (let s = 0; s < 5; s++) {
+          const sporeAngle = time * 0.002 + s * (Math.PI * 2 / 5);
+          const sporeDist = 45 + Math.sin(time * 0.003 + s) * 15;
+          const sx = Math.cos(sporeAngle) * sporeDist;
+          const sy = Math.sin(sporeAngle) * (sporeDist * 0.6) + bob - 20;
+          ctx.fillStyle = s % 2 === 0 ? 'rgba(192, 132, 252, 0.8)' : 'rgba(74, 222, 128, 0.7)';
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3 + (s % 2), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Health bar dynamics above flora
+        const curHp = ent.hp ?? INFECTED_FLORA_MAX_HP;
+        const maxHp = ent.maxHp ?? INFECTED_FLORA_MAX_HP;
+        const bw = 68;
+        const bh = 6;
+        const by = -82 + bob;
+
+        // Background container
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillRect(-bw / 2 - 1, by - 1, bw + 2, bh + 2);
+
+        // Dynamic color transition based on remaining health percentage
+        const ratio = Math.max(0, Math.min(1, curHp / maxHp));
+        let barColor = '#a855f7'; // Toxic purple (>60%)
+        if (ratio <= 0.3) {
+          barColor = '#ef4444'; // Danger red (<=30%)
+        } else if (ratio <= 0.6) {
+          barColor = '#f59e0b'; // Amber warning (31%-60%)
+        }
+
+        ctx.fillStyle = barColor;
+        ctx.fillRect(-bw / 2, by, bw * ratio, bh);
+
+        // Segment divider notches for each hit point
+        if (maxHp > 1) {
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.lineWidth = 1;
+          for (let seg = 1; seg < maxHp; seg++) {
+            const segX = -bw / 2 + (bw * (seg / maxHp));
+            ctx.beginPath();
+            ctx.moveTo(segX, by);
+            ctx.lineTo(segX, by + bh);
+            ctx.stroke();
+          }
+        }
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-bw / 2, by, bw, bh);
+
+        // HP numerical indicator text
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = '#000000';
+        ctx.fillText(`HP: ${curHp}/${maxHp}`, 0, by - 3);
+        ctx.shadowBlur = 0;
+
+      } else if (ent.type === 'task_illness_stain' || ent.type === 'task_creeping_illness') {
+        const isStain = ent.type === 'task_illness_stain';
+        const pulse = isStain ? 1.0 : (Math.sin(time * 0.005 + (ent.x * 0.05)) * 0.12 + 1.0);
+        
+        // Base dark red necrotic ground burn
+        ctx.fillStyle = 'rgba(69, 10, 10, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 42 * pulse, 24 * pulse, (ent.x * 0.1) % (Math.PI * 2), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Expanding warning ripple for creeping threats (change minigame only)
+        if (ent.type === 'task_creeping_illness') {
+          const ring = (time * 0.002 + (ent.id ? ent.id.charCodeAt(ent.id.length - 1) : 0)) % 1;
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.65 * (1 - ring)})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, 22 + ring * 36, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Vibrant crimson blotches and splatters
+        ctx.save();
+        ctx.fillStyle = '#b91c1c';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ef4444';
+        
+        // Main irregular stain body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 28 * pulse, 18 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Organic stain splatters / droplets
+        const splatterAngles = [0.4, 1.2, 2.1, 3.4, 4.3, 5.2];
+        splatterAngles.forEach((sa, sIdx) => {
+          const sDist = (24 + (sIdx % 3) * 8) * pulse;
+          const sx = Math.cos(sa + ent.x * 0.01) * sDist;
+          const sy = Math.sin(sa + ent.y * 0.01) * (sDist * 0.65);
+          const sRad = (5 + (sIdx % 2) * 2.5) * pulse;
+          ctx.beginPath();
+          ctx.arc(sx, sy, sRad, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Dark diseased veins extending outwards
+        ctx.strokeStyle = '#450a0a';
+        ctx.lineWidth = 2.5;
+        for (let v = 0; v < 4; v++) {
+          const vAngle = v * (Math.PI / 2) + 0.3;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          const midX = Math.cos(vAngle) * 18 * pulse;
+          const midY = Math.sin(vAngle) * 12 * pulse;
+          const endX = Math.cos(vAngle + 0.25) * 36 * pulse;
+          const endY = Math.sin(vAngle + 0.25) * 22 * pulse;
+          ctx.quadraticCurveTo(midX, midY, endX, endY);
+          ctx.stroke();
+        }
+
+        // Glowing red core
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Floating bubbles rising from the stain
+        for (let sp = 0; sp < 5; sp++) {
+          const spTime = (time * 0.0016 + sp * 0.2 + (ent.x ? ent.x * 0.01 : 0)) % 1;
+          const spAngle = sp * (Math.PI * 2 / 5) + Math.sin(time * 0.002 + sp) * 0.5;
+          const spDist = 12 + (sp % 3) * 6;
+          const spX = Math.cos(spAngle) * spDist;
+          const spY = Math.sin(spAngle) * (spDist * 0.5) - spTime * 36;
+          
+          ctx.save();
+          ctx.fillStyle = `rgba(255, 245, 245, ${(1 - spTime) * 0.9})`;
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = 'rgba(255, 200, 200, 0.6)';
+          ctx.beginPath();
+          ctx.arc(spX, spY, 2.2 + (sp % 2) * 1.0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+      } else if (ent.type === 'task_caged_bird') {
+        if (!ent.isReleased) {
+          // Shadow under cage
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.beginPath();
+          ctx.ellipse(0, 18, 16, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (birdCagedImgRef.current && birdCagedImgRef.current.complete && birdCagedImgRef.current.naturalWidth > 0) {
+            const img = birdCagedImgRef.current;
+            const h = 52;
+            const w = h * (img.width / img.height || 1);
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
+          } else {
+            // Procedural golden cage fallback
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-16, -22, 32, 40);
+            for (let b = -10; b <= 10; b += 5) {
+              ctx.beginPath();
+              ctx.moveTo(b, -22);
+              ctx.lineTo(b, 18);
+              ctx.stroke();
+            }
+          }
+        } else {
+          // Released flying bird companion!
+          // Flight shadow on the ground (cast below bird to simulate flight elevation)
+          ctx.fillStyle = 'rgba(0,0,0,0.18)';
+          ctx.beginPath();
+          ctx.ellipse(0, 32, 12, 4.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.save();
+          // Horizontal flip based on flight direction
+          if (ent.facing === -1) {
+            ctx.scale(-1, 1);
+          }
+
+          // Gentle banking tilt during wing stroke
+          const tilt = (ent.facing || 1) * (ent.wingState === 'down' ? -0.1 : 0.08);
+          ctx.rotate(tilt);
+
+          const img = ent.wingState === 'down' ? birdDownImgRef.current : birdUpImgRef.current;
+          if (img && img.complete && img.naturalWidth > 0) {
+            const h = 42;
+            const w = h * (img.width / img.height || 1);
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
+          } else {
+            // Procedural bird fallback
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+
+      } else if (ent.type === 'task_forest_fire') {
+        const timeSec = time * 0.001;
+        const flicker = Math.sin(time * 0.015 + (ent.x * 0.1)) * 0.15 + 1.0;
+        const windSway = Math.sin(timeSec * 4 + ent.y * 0.05) * 6;
+
+        // 1. Charcoal ash & ember scorch mark on ground
+        ctx.fillStyle = 'rgba(28, 25, 23, 0.65)';
+        ctx.beginPath();
+        ctx.ellipse(0, 8, 28, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glowing red/orange embers in ash cracks
+        ctx.fillStyle = 'rgba(234, 88, 12, 0.5)';
+        for (let em = 0; em < 4; em++) {
+          const emX = Math.cos(em * 1.5 + ent.x) * 14;
+          const emY = 8 + Math.sin(em * 1.5 + ent.y) * 5;
+          ctx.beginPath();
+          ctx.arc(emX, emY, 2.5 * flicker, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.save();
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = '#f97316';
+
+        // 2. Outer roaring red/dark orange flame body
+        ctx.fillStyle = '#ea580c';
+        ctx.beginPath();
+        ctx.moveTo(-18, 8);
+        ctx.quadraticCurveTo(-14 + windSway * 0.3, -12 * flicker, -6 + windSway * 0.6, -26 * flicker);
+        ctx.quadraticCurveTo(windSway, -42 * flicker, 2 + windSway * 0.8, -32 * flicker);
+        ctx.quadraticCurveTo(12 + windSway * 0.4, -20 * flicker, 18, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. Middle bright orange/yellow flame
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.moveTo(-12, 8);
+        ctx.quadraticCurveTo(-8 + windSway * 0.4, -8 * flicker, -3 + windSway * 0.7, -22 * flicker);
+        ctx.quadraticCurveTo(windSway * 0.5, -30 * flicker, 4 + windSway * 0.7, -18 * flicker);
+        ctx.quadraticCurveTo(8 + windSway * 0.3, -6 * flicker, 12, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. White-hot luminous core
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.moveTo(-6, 8);
+        ctx.quadraticCurveTo(-3 + windSway * 0.3, -2 * flicker, windSway * 0.4, -14 * flicker);
+        ctx.quadraticCurveTo(3 + windSway * 0.3, -2 * flicker, 6, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+
+        // 5. Rising fiery embers & sparks floating up into the smoke
+        for (let sp = 0; sp < 4; sp++) {
+          const spTime = (timeSec * 1.2 + sp * 0.25 + (ent.x * 0.02)) % 1;
+          const spX = Math.sin(spTime * 6 + sp) * 12 + windSway * spTime * 1.5;
+          const spY = 5 - spTime * 48;
+          ctx.fillStyle = `rgba(254, 215, 170, ${1 - spTime})`;
+          ctx.beginPath();
+          ctx.arc(spX, spY, 1.8 * (1 - spTime * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
       } else if (ent.type === 'maze_wall') {
         // Draw wood log / stone barrier
         ctx.fillStyle = '#4c2e1b';
@@ -1861,16 +2679,16 @@ export function GameCanvas({
         ctx.restore();
       }
 
-      // Draw yellow splashes (subjugation marks) on the ground
+      // Draw splashes (subjugation marks / water splashes) on the ground
       state.subjugationSplashes.forEach(splash => {
         ctx.save();
-        ctx.fillStyle = 'rgba(234, 179, 8, 0.45)'; // beautiful organic translucent yellow splash
+        ctx.fillStyle = splash.color || 'rgba(234, 179, 8, 0.45)';
         ctx.beginPath();
         ctx.arc(splash.x, splash.y, splash.radius, 0, Math.PI * 2);
         ctx.fill();
         
         // draw a few smaller splat drops around it to make it look like an authentic splash!
-        ctx.fillStyle = 'rgba(202, 138, 4, 0.6)';
+        ctx.fillStyle = splash.color ? splash.color.replace('0.6', '0.85').replace('0.55', '0.8') : 'rgba(202, 138, 4, 0.6)';
         const numDrops = 6;
         for (let i = 0; i < numDrops; i++) {
           const dropAngle = (i / numDrops) * Math.PI * 2 + (splash.x * 0.15);
@@ -1897,147 +2715,161 @@ export function GameCanvas({
       ctx.arc(CENTER, CENTER, OUTSKIRTS_RADIUS, 0, Math.PI * 2); // Hard boundary line
       ctx.stroke();
 
-      // Dynamic grass rendering with world-space wind, trampling, and perspective compression
-      const viewportLeft = state.player.x - (width / 2) / CAMERA_ZOOM;
-      const viewportRight = state.player.x + (width / 2) / CAMERA_ZOOM;
-      const viewportTop = state.player.y - (height / 2) / CAMERA_ZOOM;
-      const viewportBottom = state.player.y + (height / 2) / CAMERA_ZOOM;
-      const timeSec = performance.now() * 0.001;
+      // Dynamic grass and cloud shadows rendering
+      if (ENABLE_DYNAMIC_GRASS) {
+        const viewportLeft = state.player.x - (width / 2) / CAMERA_ZOOM;
+        const viewportRight = state.player.x + (width / 2) / CAMERA_ZOOM;
+        const viewportTop = state.player.y - (height / 2) / CAMERA_ZOOM;
+        const viewportBottom = state.player.y + (height / 2) / CAMERA_ZOOM;
+        const timeSec = performance.now() * 0.001;
 
-      // Track player and NPC active coordinates for dynamic trampling displacement
-      const pushers: any[] = [
-        { x: state.player.x, y: state.player.y, radius: 42 }
-      ];
-      state.entities.forEach(ent => {
-        if (ent.type && !ent.isDecoration && (
-          ent.type.startsWith('hazard_') || 
-          ent.type === 'task_running_friend' ||
-          ent.type === 'task_thief'
-        )) {
-          pushers.push({ x: ent.x, y: ent.y, radius: 30 });
-        }
-      });
-
-      // Filter visible grass blades inside viewport
-      const visibleBlades = grassBladesRef.current.filter(b => 
-        b.x >= viewportLeft - 30 &&
-        b.x <= viewportRight + 30 &&
-        b.y >= viewportTop - 30 &&
-        b.y <= viewportBottom + 60
-      );
-
-      // Quantized Wind calculations per blade for retro 10 FPS look
-      const grassFps = 10; 
-      visibleBlades.forEach(blade => {
-        // Spatial phase offset to prevent synchronized ticking
-        const phaseOffset = (blade.x * 0.08 + blade.y * 0.12);
-        const animTime = timeSec + phaseOffset;
-        const quantizedTime = Math.floor(animTime * grassFps) / grassFps;
-
-        // Overlapping dual non-repeating noise layers for wind
-        const n1 = noise(blade.x * 0.0035 + quantizedTime * 0.85, blade.y * 0.0035 + quantizedTime * 0.45);
-        const n2 = noise(blade.x * 0.011 - quantizedTime * 1.5, blade.y * 0.011 + quantizedTime * 1.15);
-        const windPower = (n1 * 0.7 + n2 * 0.3) - 0.5; // range: -0.5 to 0.5
-
-        let swayX = windPower * 14;
-        let swayY = (Math.sin(quantizedTime * 2.5 + blade.x * 0.01) * 0.1 + windPower * 0.25);
-
-        // Trampling interaction (push outward, snap back smoothly)
-        pushers.forEach(p => {
-          const dx = blade.x - p.x;
-          const dy = blade.y - p.y;
-          const d = Math.hypot(dx, dy);
-          if (d < p.radius && d > 0.1) {
-            const force = 1.0 - d / p.radius;
-            swayX += (dx / d) * force * 24;
-            swayY += (dy / d) * force * 15;
+        // Track player and NPC active coordinates for dynamic trampling displacement
+        const pushers: any[] = [
+          { x: state.player.x, y: state.player.y, radius: 42 }
+        ];
+        state.entities.forEach(ent => {
+          if (ent.type && !ent.isDecoration && (
+            ent.type.startsWith('hazard_') || 
+            ent.type === 'task_running_friend' ||
+            ent.type === 'task_creeping_illness' ||
+            ent.type === 'task_forest_fire'
+          )) {
+            pushers.push({ x: ent.x, y: ent.y, radius: 30 });
           }
         });
 
-        // Soft caps on displacement to preserve visual pixel fidelity
-        swayX = Math.max(-25, Math.min(25, swayX));
-        swayY = Math.max(-10, Math.min(10, swayY));
+        // Filter visible grass blades inside viewport
+        const visibleBlades = grassBladesRef.current.filter(b => 
+          b.x >= viewportLeft - 30 &&
+          b.x <= viewportRight + 30 &&
+          b.y >= viewportTop - 30 &&
+          b.y <= viewportBottom + 60
+        );
 
-        const bx = blade.x;
-        const by = blade.y;
-        const h = blade.height;
+        // Quantized Wind calculations per blade for retro 10 FPS look
+        const grassFps = 10; 
+        visibleBlades.forEach(blade => {
+          // Spatial phase offset to prevent synchronized ticking
+          const phaseOffset = (blade.x * 0.08 + blade.y * 0.12);
+          const animTime = timeSec + phaseOffset;
+          const quantizedTime = Math.floor(animTime * grassFps) / grassFps;
 
-        // Fake perspective compression
-        const compressionFactor = 1.0 - Math.abs(swayX) * 0.11 - Math.max(0, swayY) * 0.16;
-        const actualH = h * Math.max(0.4, compressionFactor);
-        const topX = bx + swayX;
-        const topY = by - actualH;
+          // Overlapping dual non-repeating noise layers for wind
+          const n1 = noise(blade.x * 0.0035 + quantizedTime * 0.85, blade.y * 0.0035 + quantizedTime * 0.45);
+          const n2 = noise(blade.x * 0.011 - quantizedTime * 1.5, blade.y * 0.011 + quantizedTime * 1.15);
+          const windPower = (n1 * 0.7 + n2 * 0.3) - 0.5; // range: -0.5 to 0.5
 
-        // Render blade quads
-        ctx.fillStyle = blade.color;
-        ctx.beginPath();
-        ctx.moveTo(bx - 1.5, by);
-        ctx.lineTo(topX - 0.5, topY);
-        ctx.lineTo(topX + 0.5, topY);
-        ctx.lineTo(bx + 1.5, by);
-        ctx.closePath();
-        ctx.fill();
+          let swayX = windPower * 14;
+          let swayY = (Math.sin(quantizedTime * 2.5 + blade.x * 0.01) * 0.1 + windPower * 0.25);
 
-        // Accent flora
-        if (blade.accentType === 'buttercup') {
-          // Yellow buttercup flowers
-          ctx.fillStyle = '#fef08a';
-          ctx.fillRect(topX - 2.5, topY - 2.5, 4.5, 4.5);
-          ctx.fillStyle = '#ca8a04';
-          ctx.fillRect(topX - 0.5, topY - 0.5, 1.5, 1.5);
-        } else if (blade.accentType === 'clover') {
-          // Small clover patches at base
-          ctx.fillStyle = '#4ade80';
-          ctx.fillRect(bx - 3.5, by - 2, 2, 2);
-          ctx.fillRect(bx + 1.5, by - 2, 2, 2);
-          ctx.fillRect(bx - 1, by - 4, 2, 2);
-        } else if (blade.accentType === 'long') {
-          // Secondary longer blade
-          ctx.fillStyle = '#166534';
+          // Trampling interaction (push outward, snap back smoothly)
+          pushers.forEach(p => {
+            const dx = blade.x - p.x;
+            const dy = blade.y - p.y;
+            const d = Math.hypot(dx, dy);
+            if (d < p.radius && d > 0.1) {
+              const force = 1.0 - d / p.radius;
+              swayX += (dx / d) * force * 24;
+              swayY += (dy / d) * force * 15;
+            }
+          });
+
+          // Soft caps on displacement to preserve visual pixel fidelity
+          swayX = Math.max(-25, Math.min(25, swayX));
+          swayY = Math.max(-10, Math.min(10, swayY));
+
+          const bx = blade.x;
+          const by = blade.y;
+          const h = blade.height;
+
+          // Fake perspective compression
+          const compressionFactor = 1.0 - Math.abs(swayX) * 0.11 - Math.max(0, swayY) * 0.16;
+          const actualH = h * Math.max(0.4, compressionFactor);
+          const topX = bx + swayX;
+          const topY = by - actualH;
+
+          // Render blade quads
+          ctx.fillStyle = blade.color;
           ctx.beginPath();
-          ctx.moveTo(bx - 0.5, by);
-          ctx.lineTo(bx + swayX * 1.35 - 0.5, by - actualH * 1.3);
-          ctx.lineTo(bx + swayX * 1.35 + 0.5, by - actualH * 1.3);
+          ctx.moveTo(bx - 1.5, by);
+          ctx.lineTo(topX - 0.5, topY);
+          ctx.lineTo(topX + 0.5, topY);
           ctx.lineTo(bx + 1.5, by);
           ctx.closePath();
           ctx.fill();
-        }
-      });
 
-      // Scrolling Cloud Shadows Overlay (continuous 2D world-space noise illusion)
-      ctx.save();
-      ctx.fillStyle = 'rgba(4, 18, 8, 0.08)'; 
-      const shadowTime = timeSec * 0.02; // slow moving cloud speed
-      
-      const shadowGridSize = 450;
-      const sCellXStart = Math.floor(viewportLeft / shadowGridSize) - 1;
-      const sCellXEnd = Math.ceil(viewportRight / shadowGridSize) + 1;
-      const sCellYStart = Math.floor(viewportTop / shadowGridSize) - 1;
-      const sCellYEnd = Math.ceil(viewportBottom / shadowGridSize) + 1;
+          // Accent flora
+          if (blade.accentType === 'buttercup') {
+            // Yellow buttercup flowers
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(topX - 2.5, topY - 2.5, 4.5, 4.5);
+            ctx.fillStyle = '#ca8a04';
+            ctx.fillRect(topX - 0.5, topY - 0.5, 1.5, 1.5);
+          } else if (blade.accentType === 'clover') {
+            // Small clover patches at base
+            ctx.fillStyle = '#4ade80';
+            ctx.fillRect(bx - 3.5, by - 2, 2, 2);
+            ctx.fillRect(bx + 1.5, by - 2, 2, 2);
+            ctx.fillRect(bx - 1, by - 4, 2, 2);
+          } else if (blade.accentType === 'long') {
+            // Secondary longer blade
+            ctx.fillStyle = '#166534';
+            ctx.beginPath();
+            ctx.moveTo(bx - 0.5, by);
+            ctx.lineTo(bx + swayX * 1.35 - 0.5, by - actualH * 1.3);
+            ctx.lineTo(bx + swayX * 1.35 + 0.5, by - actualH * 1.3);
+            ctx.lineTo(bx + 1.5, by);
+            ctx.closePath();
+            ctx.fill();
+          }
+        });
 
-      for (let cx = sCellXStart; cx <= sCellXEnd; cx++) {
-        for (let cy = sCellYStart; cy <= sCellYEnd; cy++) {
-          const baseWorldX = cx * shadowGridSize + Math.sin(cx * 1.8 + shadowTime) * 120 + shadowTime * 180;
-          const baseWorldY = cy * shadowGridSize + Math.cos(cy * 2.2 + shadowTime * 0.9) * 120 + shadowTime * 90;
-          
-          ctx.beginPath();
-          ctx.arc(baseWorldX, baseWorldY, 160, 0, Math.PI * 2);
-          ctx.arc(baseWorldX - 90, baseWorldY + 30, 110, 0, Math.PI * 2);
-          ctx.arc(baseWorldX + 80, baseWorldY - 40, 130, 0, Math.PI * 2);
-          ctx.arc(baseWorldX + 40, baseWorldY + 70, 110, 0, Math.PI * 2);
-          ctx.fill();
+        // Scrolling Cloud Shadows Overlay (continuous 2D world-space noise illusion)
+        ctx.save();
+        ctx.fillStyle = 'rgba(4, 18, 8, 0.08)'; 
+        const shadowTime = timeSec * 0.02; // slow moving cloud speed
+        
+        const shadowGridSize = 450;
+        const sCellXStart = Math.floor(viewportLeft / shadowGridSize) - 1;
+        const sCellXEnd = Math.ceil(viewportRight / shadowGridSize) + 1;
+        const sCellYStart = Math.floor(viewportTop / shadowGridSize) - 1;
+        const sCellYEnd = Math.ceil(viewportBottom / shadowGridSize) + 1;
+
+        for (let cx = sCellXStart; cx <= sCellXEnd; cx++) {
+          for (let cy = sCellYStart; cy <= sCellYEnd; cy++) {
+            const baseWorldX = cx * shadowGridSize + Math.sin(cx * 1.8 + shadowTime) * 120 + shadowTime * 180;
+            const baseWorldY = cy * shadowGridSize + Math.cos(cy * 2.2 + shadowTime * 0.9) * 120 + shadowTime * 90;
+            
+            ctx.beginPath();
+            ctx.arc(baseWorldX, baseWorldY, 160, 0, Math.PI * 2);
+            ctx.arc(baseWorldX - 90, baseWorldY + 30, 110, 0, Math.PI * 2);
+            ctx.arc(baseWorldX + 80, baseWorldY - 40, 130, 0, Math.PI * 2);
+            ctx.arc(baseWorldX + 40, baseWorldY + 70, 110, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Y-SORTED RENDERING LOOP (Entities + Player)
-      const drawables = [
+      const allDrawables = [
         ...state.entities.map(e => ({ ...e, isPlayer: false })),
         { ...state.player, type: 'player', radius: 12, isPlayer: true }
       ];
-      drawables.sort((a, b) => a.y - b.y);
 
-      drawables.forEach(item => {
+      // High Z-axis priority: rendered above trees and environmental objects for unobstructed visibility
+      const isHighZ = (e: any) => 
+        e.type === 'task_push_bird' || 
+        (e.type === 'task_caged_bird' && e.isReleased) ||
+        e.type === 'task_running_friend' ||
+        e.type === 'task_hidden_friend' ||
+        e.type === 'task_marking' ||
+        e.id === 'center_marking';
+
+      const groundDrawables = allDrawables.filter(e => !isHighZ(e));
+      groundDrawables.sort((a, b) => a.y - b.y);
+
+      groundDrawables.forEach(item => {
         if (item.isPlayer) {
           drawPlayer(ctx, item.x, item.y, state.player.targetX, state.player.targetY);
         } else {
@@ -2045,10 +2877,17 @@ export function GameCanvas({
         }
       });
 
+      // Elevated Birds Layer (rendered above trees, foliage, and nest)
+      const highZEntities = allDrawables.filter(isHighZ);
+      highZEntities.sort((a, b) => a.y - b.y);
+      highZEntities.forEach(item => {
+        drawEntity(ctx, item);
+      });
+
       // HALO LAYER (Draw glows above trees for important objects)
       ctx.globalCompositeOperation = 'screen';
-      drawables.forEach(item => {
-        const isTask = item.type && item.type.startsWith('task_') && !item.isDecoration;
+      allDrawables.forEach(item => {
+        const isTask = item.type && item.type.startsWith('task_') && !item.isDecoration && item.type !== 'task_dissatisfaction_hole';
         const isHazard = item.type && item.type.startsWith('hazard_');
         const isSpecial = item.type && item.type.startsWith('special_item_');
         const isPrimal = item.type === 'primal_actor';
@@ -2060,6 +2899,12 @@ export function GameCanvas({
            let colorInner = 'rgba(255, 255, 255, 0.3)';
            if (isHazard) colorInner = 'rgba(255, 50, 50, 0.3)';
            else if (isSpecial) colorInner = 'rgba(200, 100, 255, 0.5)';
+           else if (item.type === 'task_infected_flora') colorInner = 'rgba(168, 85, 247, 0.45)';
+           else if (item.type === 'task_forest_fire') colorInner = 'rgba(249, 115, 22, 0.6)';
+           else if (item.type === 'task_bird_nest') colorInner = 'rgba(234, 179, 8, 0.45)';
+           else if (item.type === 'task_push_bird' || item.type === 'task_push_cat') colorInner = 'rgba(56, 189, 248, 0.45)';
+           else if (item.type === 'task_caged_bird' && !item.isReleased) colorInner = 'rgba(217, 119, 6, 0.45)';
+           else if (item.type === 'task_creeping_illness' || item.type === 'task_illness_stain') colorInner = 'rgba(239, 68, 68, 0.45)';
            else if (isTask) colorInner = 'rgba(255, 200, 50, 0.3)';
            else if (isPrimal) colorInner = 'rgba(100, 255, 100, 0.3)';
            else if (item.isPlayer) colorInner = 'rgba(255, 255, 255, 0.3)';
@@ -2145,7 +2990,14 @@ export function GameCanvas({
       ctx.restore();
 
       // Screen space target indicator arrow
-      const target = state.entities.find(e => e.type === 'task_running_friend' || e.type === 'task_push_cat');
+      const target = state.entities.find(e => 
+        e.type === 'task_running_friend' || 
+        e.type === 'task_push_bird' || 
+        e.type === 'task_push_cat' || 
+        e.type === 'task_infected_flora' || 
+        e.type === 'task_fight' ||
+        (e.type === 'task_caged_bird' && !e.isReleased)
+      );
       if (target) {
          const dx = target.x - state.player.x;
          const dy = target.y - state.player.y;
@@ -2162,14 +3014,16 @@ export function GameCanvas({
             const arrowX = cx + Math.cos(angle) * arrowRadius;
             const arrowY = cy + Math.sin(angle) * arrowRadius;
             
+            const isFlora = target.type === 'task_infected_flora' || target.type === 'task_fight';
+            const isBird = target.type === 'task_caged_bird' || target.type === 'task_push_bird' || target.type === 'task_push_cat';
             ctx.save();
             ctx.translate(arrowX, arrowY);
             ctx.rotate(angle);
             
             ctx.shadowBlur = 15;
-            ctx.shadowColor = '#d946ef'; // Fuchsia Cheshire Cat glow
-            ctx.fillStyle = '#f472b6'; 
-            ctx.strokeStyle = '#db2777';
+            ctx.shadowColor = isBird ? '#38bdf8' : (isFlora ? '#a855f7' : '#d946ef');
+            ctx.fillStyle = isBird ? '#7dd3fc' : (isFlora ? '#c084fc' : '#f472b6'); 
+            ctx.strokeStyle = isBird ? '#0284c7' : (isFlora ? '#7e22ce' : '#db2777');
             ctx.lineWidth = 2.5;
             
             ctx.beginPath();
@@ -2184,10 +3038,14 @@ export function GameCanvas({
             // Draw distance label rotated upright
             ctx.rotate(-angle);
             ctx.shadowBlur = 0;
-            ctx.fillStyle = '#fbcfe8';
+            ctx.fillStyle = isBird ? '#bae6fd' : (isFlora ? '#e9d5ff' : '#fbcfe8');
             ctx.font = 'bold 11px monospace';
             ctx.textAlign = 'center';
-            const labelName = target.type === 'task_push_cat' ? 'CAT' : 'FRIEND';
+            const labelName = (target.type === 'task_push_cat' || target.type === 'task_push_bird')
+              ? 'BIRD' 
+              : (target.type === 'task_running_friend' 
+                ? 'FRIEND' 
+                : (isBird ? 'BIRD' : 'FLORA'));
             ctx.fillText(`${labelName}: ${Math.round(worldDist)}m`, 0, 24);
             
             ctx.restore();
@@ -2214,9 +3072,27 @@ export function GameCanvas({
 
     animId = requestAnimationFrame(loop);
 
+    const updatePointer = (clientX: number, clientY: number) => {
+      const rect = cvs.getBoundingClientRect();
+      state.hasPointer = true;
+      state.pointerScreenX = clientX - rect.left;
+      state.pointerScreenY = clientY - rect.top;
+      state.idleTimer = 0;
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      updatePointer(e.clientX, e.clientY);
+    };
+
+    const handlePointerLeave = () => {
+      state.hasPointer = false;
+      state.player.targetX = state.player.x;
+      state.player.targetY = state.player.y;
+    };
+
     const handlePointerDown = (e: PointerEvent) => {
       e.preventDefault();
-      state.idleTimer = 0;
+      updatePointer(e.clientX, e.clientY);
       
       const rect = cvs.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -2226,10 +3102,7 @@ export function GameCanvas({
       const worldX = state.player.x + (clickX - rect.width / 2) / CAMERA_ZOOM;
       const worldY = state.player.y + (clickY - rect.height / 2) / CAMERA_ZOOM;
 
-      if (e.button === 0) { // Left Click - Move
-        state.player.targetX = worldX;
-        state.player.targetY = worldY;
-      } else if (e.button === 2) { // Right Click - Act
+      if (e.button === 2) { // Right Click - Act
         // Subjugation telemetry
         const nodeStr = `${Math.round(worldX/50)}_${Math.round(worldY/50)}`;
         if (state.lastClickNode === nodeStr) {
@@ -2256,7 +3129,7 @@ export function GameCanvas({
         
         // Task Interactions
         state.entities.forEach((ent, i) => {
-          if (dist({x: worldX, y: worldY}, ent) < ent.radius + 20 && dist(state.player, ent) < 100) {
+          if (dist({x: worldX, y: worldY}, ent) < ent.radius + 25 && dist(state.player, ent) < (ent.type === 'task_infected_flora' || ent.type === 'task_forest_fire' ? 160 : 100)) {
             if (ent.type === 'task_keypad') {
                const guess = prompt("Enter 3 digit password:");
                if (guess === "123") {
@@ -2266,18 +3139,58 @@ export function GameCanvas({
                  logTelemetry(sessionId, 'submission', { reason: 'failed_password' });
                  setHudMsg("Incorrect password. Despair grows.");
                }
-            } else if (ent.type === 'task_fight') {
+            } else if (ent.type === 'task_fight' || ent.type === 'task_infected_flora') {
                ent.hp--;
                if (ent.hp <= 0) {
                  state.taskProgress++;
                  state.entities.splice(i, 1);
+                 setHudMsg(`Infected flora purged! Hope restored to the forest (${state.taskProgress}/${state.taskMax})`);
+               } else {
+                 setHudMsg(`Purging infected flora... HP: ${ent.hp}/${ent.maxHp || INFECTED_FLORA_MAX_HP}`);
+               }
+            } else if (ent.type === 'task_illness_stain' || ent.type === 'task_creeping_illness') {
+               state.taskProgress++;
+               state.subjugationSplashes.push({
+                 x: ent.x,
+                 y: ent.y,
+                 radius: 38
+               });
+               state.entities.splice(i, 1);
+               const msg = ent.type === 'task_illness_stain' 
+                 ? `Illness stain cleansed! Sovereignty restored (${state.taskProgress}/${state.taskMax})`
+                 : `Creeping illness eliminated! Rabbit hole defended (${state.taskProgress}/${state.taskMax})`;
+               setHudMsg(msg);
+            } else if (ent.type === 'task_forest_fire') {
+               state.taskProgress++;
+               state.subjugationSplashes.push({
+                 x: ent.x,
+                 y: ent.y,
+                 radius: 38,
+                 color: 'rgba(56, 189, 248, 0.6)'
+               });
+               state.entities.splice(i, 1);
+               const remainingFires = state.entities.filter(e => e.type === 'task_forest_fire').length;
+               if (remainingFires === 0) {
+                 state.tasksCompleted = true;
+                 setTasksDone(true);
+                 setHudMsg("All forest fires extinguished! The forest is saved. Approach and Right-Click the Primal Actor.");
+               } else {
+                 setHudMsg(`Fire extinguished! ${remainingFires} active fires remaining.`);
+               }
+            } else if (ent.type === 'task_caged_bird' && !ent.isReleased) {
+               ent.isReleased = true;
+               state.taskProgress++;
+               state.subjugationSplashes.push({
+                 x: ent.x,
+                 y: ent.y,
+                 radius: 40
+               });
+               if (state.taskProgress >= state.taskMax) {
+                 setHudMsg("All imprisoned birds set free! Sovereignty reclaimed. Approach and Right-Click the Primal Actor.");
+               } else {
+                 setHudMsg(`Bird freed from cage! (${state.taskProgress}/${state.taskMax})`);
                }
             } else if (ent.type === 'task_blueprint' && state.taskProgress >= 3) {
-               state.taskProgress = 4; // Done
-            } else if (ent.type === 'task_prison') {
-               // Must L/R click alternately. Since this is right click only, let's simplify to 10 right clicks
-               state.taskProgress++;
-               if (state.taskProgress >= state.taskMax) state.entities.splice(i, 1);
             }
           }
         });
@@ -2285,11 +3198,17 @@ export function GameCanvas({
     };
 
     cvs.addEventListener('pointerdown', handlePointerDown);
+    cvs.addEventListener('pointermove', handlePointerMove);
+    cvs.addEventListener('pointerenter', handlePointerMove);
+    cvs.addEventListener('pointerleave', handlePointerLeave);
     cvs.addEventListener('contextmenu', e => e.preventDefault());
 
     return () => {
       cancelAnimationFrame(animId);
       cvs.removeEventListener('pointerdown', handlePointerDown);
+      cvs.removeEventListener('pointermove', handlePointerMove);
+      cvs.removeEventListener('pointerenter', handlePointerMove);
+      cvs.removeEventListener('pointerleave', handlePointerLeave);
     };
   }, [worldview, isUnlocked, sessionId, debateAttempt, collectedItems]);
 
@@ -2311,7 +3230,7 @@ export function GameCanvas({
           ))}
         </div>
         <div className="mt-4 flex gap-4 text-xs font-mono text-neutral-500 uppercase tracking-widest">
-          <span>L-Click: Move</span>
+          <span>Mouse: Auto-Follow</span>
           <span>R-Click: Act</span>
         </div>
       </div>

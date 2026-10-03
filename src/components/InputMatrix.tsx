@@ -20,8 +20,6 @@ const constraintOptions: Constraint[] = [
 ];
 
 const agentOptions: AgentOfChange[] = [
-  'self',
-  'enemies',
   'lovers',
   'bosses',
   'subordinates',
@@ -40,7 +38,7 @@ export function InputMatrix({ onComplete }: Props) {
   const [pairIdx, setPairIdx] = useState<number>(0);
   
   const [constraint, setConstraint] = useState<Constraint>('High Environmental');
-  const [agent, setAgent] = useState<AgentOfChange>('enemies');
+  const [agent, setAgent] = useState<AgentOfChange>('lovers');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

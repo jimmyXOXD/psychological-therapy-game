@@ -1,4 +1,4 @@
-export type AgentOfChange = 'self' | 'enemies' | 'lovers' | 'bosses' | 'subordinates' | 'strangers';
+export type AgentOfChange = 'lovers' | 'bosses' | 'subordinates' | 'strangers';
 export type Constraint = 'Low Environmental' | 'High Environmental' | 'Low Social' | 'High Social';
 
 export interface Worldview {

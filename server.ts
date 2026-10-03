@@ -1,10 +1,12 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
-// Initialize Gemini API
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+function getAI() {
+  return new GoogleGenAI(process.env.GEMINI_API_KEY ? { apiKey: process.env.GEMINI_API_KEY } : {});
+}
 
 
 const singularAgent: Record<string, string> = { 'enemies': 'enemy', 'lovers': 'lover', 'bosses': 'boss', 'subordinates': 'subordinate', 'strangers': 'stranger', 'self': 'self' };
@@ -115,7 +117,7 @@ You must respond in exactly one or two primal, stubborn sentences. Do not break 
         parts: [{ text: msg.text }]
       }));
 
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: 'gemini-3.1-flash-lite',
         contents: [
           ...formattedHistory,
@@ -180,7 +182,7 @@ Chat Log:
 ${JSON.stringify(chatLog)}
 `;
 
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: 'gemini-3.1-flash-lite',
         contents: prompt,
         config: {

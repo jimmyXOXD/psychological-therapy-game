@@ -24,7 +24,7 @@ export function StrategySimulation({ worldview }: Props) {
   const [collectedItems, setCollectedItems] = useState<boolean[]>([false, false, false]);
   const [hasPresentedStoryForAttempt, setHasPresentedStoryForAttempt] = useState<Record<number, boolean>>({});
 
-  const singularAgent: Record<string, string> = { 'enemies': 'enemy', 'lovers': 'lover', 'bosses': 'boss', 'subordinates': 'subordinate', 'strangers': 'stranger', 'self': 'self' };
+  const singularAgent: Record<string, string> = { 'lovers': 'lover', 'bosses': 'boss', 'subordinates': 'subordinate', 'strangers': 'stranger' };
   const role = singularAgent[worldview.agent] || worldview.agent;
 
   // Chat state
