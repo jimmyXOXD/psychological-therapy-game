@@ -57,12 +57,12 @@ function buildContext(worldview: any) {
   const role = singularAgent[worldview.agent] || worldview.agent;
   
   const fitnessDef = worldview.fitness === 'unallowed' 
-    ? "the environment simply does not allow it" 
-    : "we are inherently flawed";
+    ? "the external environment strictly forbids it (blaming the environment)" 
+    : "humans are inherently broken and undeserving (blaming the self)";
     
   const validationDef = worldview.validation === 'granted'
-    ? "we could try repeatedly but never be able to grant it"
-    : "we could wait for the right circumstances to allow it, which will never come";
+    ? "any attempt to achieve it is doomed to inevitable failure"
+    : "there is no validation to even try, resulting in an endless, futile wait";
     
   return { role, fitnessDef, validationDef };
 }

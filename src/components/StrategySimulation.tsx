@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Worldview, ChatMessage } from '../types';
 import { GameCanvas } from './GameCanvas';
 import { motion } from 'motion/react';
-import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb } from 'lucide-react';
+import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { registerWin, logTelemetry } from '../firebase';
 
@@ -14,6 +14,7 @@ export function StrategySimulation({ worldview }: Props) {
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
   const [evalSummary, setEvalSummary] = useState('');
   const [latestHint, setLatestHint] = useState<string | null>(null);
@@ -27,10 +28,37 @@ export function StrategySimulation({ worldview }: Props) {
   const singularAgent: Record<string, string> = { 'lovers': 'lover', 'bosses': 'boss', 'subordinates': 'subordinate', 'strangers': 'stranger' };
   const role = singularAgent[worldview.agent] || worldview.agent;
 
+  const getInitialArgument = (agentRole: string, wv: Worldview) => {
+    const needGoal = wv.needType === 'need'
+      ? `experience ${wv.selectedTerm}`
+      : `escape the pain of ${wv.selectedTerm}`;
+
+    const coreBelief = wv.fitness === 'unallowed'
+      ? `the world will never allow humans to ${needGoal}`
+      : `humans are too inherently flawed to ${needGoal}`;
+
+    const outcomeBelief = wv.validation === 'granted'
+      ? 'any attempt to pursue it is doomed to inevitable failure'
+      : 'there is no validation to even try, making any wait endless and futile';
+
+    const pressureContext = {
+      'Low Environmental': 'subtle, prolonged environmental instability',
+      'High Environmental': 'severe environmental hazards',
+      'Low Social': 'lingering social isolation and pressure',
+      'High Social': 'intense judgment and scrutiny from others'
+    }[wv.reason] || `${wv.reason.toLowerCase()} pressures`;
+
+    return `I stand before you as your ${agentRole}. You cannot pass beyond this threshold.
+
+I believe that ${coreBelief} under ${pressureContext}—${outcomeBelief}. In my eyes, this conclusion is absolute.
+
+If you wish to cross, you must debate me and challenge my conviction. Argue your case with reason—why should I let you pass?`;
+  };
+
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: 'model',
-    text: `I am your ${role}. You will not pass. It is decided: Humans are ${worldview.fitness} to be ${worldview.validation} the ${worldview.needType} of ${worldview.selectedTerm} because of ${worldview.reason}.`
+    text: getInitialArgument(role, worldview)
   }]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -284,91 +312,119 @@ export function StrategySimulation({ worldview }: Props) {
         </div>
       )}
       {showChat && !isGameOver && !isUnlocked && (
-        <div 
-          className="absolute inset-0 z-50 bg-cover bg-center flex items-center justify-start p-8"
-          style={{ backgroundImage: `url('/debate_background.jfif')` }}
-        >
-          <div className="w-full max-w-lg bg-neutral-950/80 backdrop-blur-md border border-orange-900/50 rounded-sm shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="p-4 border-b border-orange-900/50 bg-black/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Terminal className="text-orange-500 w-5 h-5" />
-                <h3 className="text-orange-400 font-mono text-sm uppercase tracking-widest">Primal Actor ({role})</h3>
-              </div>
-              <div className="flex items-center gap-3">
-                {latestHint && (
-                  <button 
-                    onClick={() => setMessages(prev => [...prev, { role: 'model', text: `[Evaluator Hint]: ${latestHint}` }])} 
-                    className="text-yellow-600 hover:text-yellow-400 p-1 bg-yellow-950/30 rounded-sm border border-yellow-900/50 flex items-center gap-1 text-xs px-2 cursor-pointer"
-                    title="Get a hint from the evaluator"
-                  >
-                    <Lightbulb className="w-4 h-4" /> Hint
-                  </button>
-                )}
-                <button onClick={handleCloseChat} className="text-orange-700 hover:text-orange-400 cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <div className="absolute inset-0 z-50 bg-black flex items-center justify-center md:justify-start p-2 sm:p-4 md:p-8 overflow-hidden select-none">
+          {/* Ambient blurred backdrop fills letterbox edges on wide/tall screens */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110 pointer-events-none"
+            style={{ backgroundImage: `url('/debate_background.jfif')` }}
+          />
 
-            {/* Subheader tracking debate attempt stats & relics */}
-            <div className="px-4 py-2 bg-neutral-950 border-b border-orange-900/30 flex items-center justify-between text-xs font-mono text-neutral-400">
-              <div className="flex gap-4">
-                <span>Debate Attempt: <strong className="text-orange-400">{debateAttempt} of 4</strong></span>
-                <span>Prompts remaining: <strong className="text-orange-400">{5 - promptsSentInAttempt}</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Relics used:</span>
-                <span className={`w-2.5 h-2.5 rounded-full ${collectedItems[0] ? 'bg-red-500 shadow shadow-red-500' : 'bg-neutral-800 border border-neutral-700'}`} title="Shattered Mirror of the Past (Traumatic Past Story)" />
-                <span className={`w-2.5 h-2.5 rounded-full ${collectedItems[1] ? 'bg-yellow-500 shadow shadow-yellow-500' : 'bg-neutral-800 border border-neutral-700'}`} title="Emblem of the Defiant (Heresy Story)" />
-                <span className={`w-2.5 h-2.5 rounded-full ${collectedItems[2] ? 'bg-purple-500 shadow shadow-purple-500' : 'bg-neutral-800 border border-neutral-700'}`} title="Extinction Ledger (Inevitable Extinction Speculation)" />
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm">
-              {messages.map((msg, idx) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  key={idx} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[85%] p-4 rounded-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-orange-950/50 text-orange-200 border border-orange-800/50' 
-                      : msg.text.startsWith('[Evaluator Hint]') 
-                        ? 'bg-yellow-950/30 text-yellow-300 border border-yellow-900/50 font-sans'
-                        : 'bg-neutral-950 text-neutral-300 border border-neutral-800'
-                  }`}>
-                    {msg.text}
-                  </div>
-                </motion.div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-neutral-950 text-neutral-600 p-4 rounded-sm border border-neutral-800 animate-pulse">
-                    ...
-                  </div>
+          {/* Full debate background image - completely contained so 100% of the artwork is always visible on any screen size */}
+          <img 
+            src="/debate_background.jfif" 
+            alt="Debate Scene Background" 
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none z-0"
+          />
+
+          {isChatMinimized ? (
+            <button
+              onClick={() => setIsChatMinimized(false)}
+              className="relative z-10 self-end m-4 px-4 py-2.5 bg-neutral-950/90 hover:bg-neutral-900 border border-orange-700/70 text-orange-300 font-mono text-xs rounded-sm shadow-2xl flex items-center gap-2 cursor-pointer transition-all backdrop-blur-md"
+              title="Show debate chat dialog"
+            >
+              <Eye className="w-4 h-4 text-orange-400" />
+              <span>Resume Debate ({5 - promptsSentInAttempt} prompts left)</span>
+            </button>
+          ) : (
+            <div className="relative z-10 w-full max-w-sm sm:max-w-md lg:max-w-lg bg-neutral-950/85 backdrop-blur-md border border-orange-900/60 rounded-sm shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+              <div className="p-3 sm:p-4 border-b border-orange-900/50 bg-black/60 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Terminal className="text-orange-500 w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                  <h3 className="text-orange-400 font-mono text-xs sm:text-sm uppercase tracking-widest truncate">Primal Actor ({role})</h3>
                 </div>
-              )}
-            </div>
+                <div className="flex items-center gap-2">
+                  {latestHint && (
+                    <button 
+                      onClick={() => setMessages(prev => [...prev, { role: 'model', text: `[Evaluator Hint]: ${latestHint}` }])} 
+                      className="text-yellow-500 hover:text-yellow-400 p-1 bg-yellow-950/40 rounded-sm border border-yellow-900/50 flex items-center gap-1 text-[11px] sm:text-xs px-2 cursor-pointer"
+                      title="Get a hint from the evaluator"
+                    >
+                      <Lightbulb className="w-3.5 h-3.5" /> Hint
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setIsChatMinimized(true)} 
+                    className="text-orange-600 hover:text-orange-300 cursor-pointer p-1"
+                    title="Minimize chat to view artwork"
+                  >
+                    <EyeOff className="w-4 h-4" />
+                  </button>
+                  <button onClick={handleCloseChat} className="text-orange-600 hover:text-orange-300 cursor-pointer p-1">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
 
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-orange-900/50 bg-black/50 flex gap-3">
-              <input 
-                type="text" 
-                value={inputText}
-                onChange={e => setInputText(e.target.value)}
-                className="flex-1 bg-neutral-950 border border-neutral-800 p-3 text-orange-200 font-mono text-sm outline-none focus:border-orange-500 transition-colors placeholder:text-neutral-700"
-                placeholder="Argue your counter-logic..."
-              />
-              <button 
-                type="submit"
-                disabled={isTyping}
-                className="px-6 bg-orange-950 hover:bg-orange-900 text-orange-400 transition-colors border border-orange-800 disabled:opacity-50 cursor-pointer flex items-center justify-center"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
+              {/* Subheader tracking debate attempt stats & relics */}
+              <div className="px-3 sm:px-4 py-2 bg-neutral-950/90 border-b border-orange-900/30 flex items-center justify-between text-[11px] sm:text-xs font-mono text-neutral-400">
+                <div className="flex gap-2 sm:gap-4">
+                  <span>Attempt: <strong className="text-orange-400">{debateAttempt}/4</strong></span>
+                  <span>Prompts: <strong className="text-orange-400">{5 - promptsSentInAttempt}</strong></span>
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="hidden sm:inline">Relics:</span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${collectedItems[0] ? 'bg-red-500 shadow shadow-red-500' : 'bg-neutral-800 border border-neutral-700'}`} title="Shattered Mirror of the Past (Traumatic Past Story)" />
+                  <span className={`w-2.5 h-2.5 rounded-full ${collectedItems[1] ? 'bg-yellow-500 shadow shadow-yellow-500' : 'bg-neutral-800 border border-neutral-700'}`} title="Emblem of the Defiant (Heresy Story)" />
+                  <span className={`w-2.5 h-2.5 rounded-full ${collectedItems[2] ? 'bg-purple-500 shadow shadow-purple-500' : 'bg-neutral-800 border border-neutral-700'}`} title="Extinction Ledger (Inevitable Extinction Speculation)" />
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 text-sm">
+                {messages.map((msg, idx) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key={idx} 
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-[85%] p-3 sm:p-4 rounded-sm ${
+                      msg.role === 'user' 
+                        ? 'bg-orange-950/50 text-orange-200 border border-orange-800/50' 
+                        : msg.text.startsWith('[Evaluator Hint]') 
+                          ? 'bg-yellow-950/30 text-yellow-300 border border-yellow-900/50 font-sans'
+                          : 'bg-neutral-950 text-neutral-300 border border-neutral-800'
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </motion.div>
+                ))}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="bg-neutral-950 text-neutral-600 p-4 rounded-sm border border-neutral-800 animate-pulse">
+                      ...
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-orange-900/50 bg-black/60 flex gap-2 sm:gap-3">
+                <input 
+                  type="text" 
+                  value={inputText}
+                  onChange={e => setInputText(e.target.value)}
+                  className="flex-1 bg-neutral-950 border border-neutral-800 p-2.5 sm:p-3 text-orange-200 font-mono text-sm outline-none focus:border-orange-500 transition-colors placeholder:text-neutral-700"
+                  placeholder="Argue your counter-logic..."
+                />
+                <button 
+                  type="submit"
+                  disabled={isTyping}
+                  className="px-4 sm:px-6 bg-orange-950 hover:bg-orange-900 text-orange-400 transition-colors border border-orange-800 disabled:opacity-50 cursor-pointer flex items-center justify-center shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
     </div>

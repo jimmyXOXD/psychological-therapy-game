@@ -1,29 +1,58 @@
 import React, { useState } from 'react';
 import { Worldview, Constraint, AgentOfChange } from '../types';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Heart, 
+  Briefcase, 
+  UserCheck, 
+  Footprints, 
+  Shield, 
+  Compass, 
+  Users, 
+  KeyRound, 
+  Flame, 
+  Target, 
+  Lock, 
+  Mountain, 
+  CloudRain, 
+  Users2, 
+  EyeOff, 
+  Sparkles, 
+  ArrowRight,
+  ArrowLeft,
+  Dices
+} from 'lucide-react';
 
-const pairs = [
-  { need: 'peace', pain: 'dissatisfaction' },
-  { need: 'wonder', pain: 'disappointment' },
-  { need: 'support', pain: 'loneliness' },
-  { need: 'certainty', pain: 'uncertainty' },
-  { need: 'hope', pain: 'physical pain' },
-  { need: 'attention', pain: 'imprisonment' },
-  { need: 'privacy', pain: 'change' }
+interface PairDef {
+  need: string;
+  pain: string;
+  needLabel: string;
+  painLabel: string;
+  icon: any;
+}
+
+const pairs: PairDef[] = [
+  { need: 'peace', pain: 'dissatisfaction', needLabel: 'Peace', painLabel: 'Dissatisfaction', icon: Shield },
+  { need: 'wonder', pain: 'disappointment', needLabel: 'Wonder', painLabel: 'Disappointment', icon: Compass },
+  { need: 'support', pain: 'loneliness', needLabel: 'Support', painLabel: 'Loneliness', icon: Users },
+  { need: 'certainty', pain: 'uncertainty', needLabel: 'Certainty', painLabel: 'Uncertainty', icon: KeyRound },
+  { need: 'hope', pain: 'physical pain', needLabel: 'Hope', painLabel: 'Physical Pain', icon: Flame },
+  { need: 'attention', pain: 'imprisonment', needLabel: 'Attention', painLabel: 'Imprisonment', icon: Target },
+  { need: 'privacy', pain: 'change', needLabel: 'Privacy', painLabel: 'Change', icon: Lock }
 ];
 
-const constraintOptions: Constraint[] = [
-  'Low Environmental',
-  'High Environmental',
-  'Low Social',
-  'High Social'
+const constraints: { id: Constraint; title: string; subtitle: string; icon: any }[] = [
+  { id: 'High Environmental', title: 'High Environmental', subtitle: 'Imminent danger & visceral reality', icon: Mountain },
+  { id: 'Low Environmental', title: 'Low Environmental', subtitle: 'Prolonged decay & slow erosion', icon: CloudRain },
+  { id: 'High Social', title: 'High Social', subtitle: 'Sudden judgment & fierce competition', icon: Users2 },
+  { id: 'Low Social', title: 'Low Social', subtitle: 'Quiet estrangement & cold neglect', icon: EyeOff }
 ];
 
-const agentOptions: AgentOfChange[] = [
-  'lovers',
-  'bosses',
-  'subordinates',
-  'strangers'
+const agents: { id: AgentOfChange; title: string; subtitle: string; icon: any }[] = [
+  { id: 'lovers', title: 'The Lover', subtitle: 'Biological legacy & survival', icon: Heart },
+  { id: 'bosses', title: 'The Boss', subtitle: 'Command & value extraction', icon: Briefcase },
+  { id: 'subordinates', title: 'The Subordinate', subtitle: 'Invested time & security', icon: UserCheck },
+  { id: 'strangers', title: 'The Stranger', subtitle: 'Self-preservation & distance', icon: Footprints }
 ];
 
 interface Props {
@@ -31,116 +60,527 @@ interface Props {
 }
 
 export function InputMatrix({ onComplete }: Props) {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
+  // Worldview state
   const [fitness, setFitness] = useState<'unallowed' | 'unfit'>('unfit');
   const [validation, setValidation] = useState<'granted' | 'validated'>('granted');
-  
   const [needType, setNeedType] = useState<'need' | 'pain'>('need');
-  const [pairIdx, setPairIdx] = useState<number>(0);
-  
+  const [pairIdx, setPairIdx] = useState<number>(3); // certainty
   const [constraint, setConstraint] = useState<Constraint>('High Environmental');
   const [agent, setAgent] = useState<AgentOfChange>('lovers');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const selectedPair = pairs[pairIdx];
+  const selectedPair = pairs[pairIdx];
+  const selectedTerm = needType === 'need' ? selectedPair.need : selectedPair.pain;
+
+  // Auto-advance helper with gentle organic delay for feedback
+  const handleSelectDuality = (idx: number) => {
+    setPairIdx(idx);
+    setTimeout(() => setStep(2), 240);
+  };
+
+  const handleSelectConstraint = (c: Constraint) => {
+    setConstraint(c);
+    setTimeout(() => setStep(3), 240);
+  };
+
+  const handleSelectAgent = (a: AgentOfChange) => {
+    setAgent(a);
+    setTimeout(() => setStep(4), 240);
+  };
+
+  const randomizeFate = () => {
+    const randomNeedType: 'need' | 'pain' = Math.random() > 0.5 ? 'need' : 'pain';
+    const randomPairIdx = Math.floor(Math.random() * pairs.length);
+    const randomConstraint = constraints[Math.floor(Math.random() * constraints.length)].id;
+    const randomAgent = agents[Math.floor(Math.random() * agents.length)].id;
+    const randomFitness: 'unallowed' | 'unfit' = Math.random() > 0.5 ? 'unfit' : 'unallowed';
+    const randomValidation: 'granted' | 'validated' = Math.random() > 0.5 ? 'granted' : 'validated';
+
+    setNeedType(randomNeedType);
+    setPairIdx(randomPairIdx);
+    setConstraint(randomConstraint);
+    setAgent(randomAgent);
+    setFitness(randomFitness);
+    setValidation(randomValidation);
+    setStep(4);
+  };
+
+  const handleSubmit = () => {
     onComplete({
       fitness,
       validation,
       needType,
       fundamentalNeed: selectedPair.need,
-      selectedTerm: needType === 'need' ? selectedPair.need : selectedPair.pain,
+      selectedTerm,
       reason: constraint,
       agent
     });
   };
 
+  const stepTitles = [
+    { num: 1, label: 'The Duality', tag: selectedTerm },
+    { num: 2, label: 'The Pressure', tag: constraint.split(' ')[0] },
+    { num: 3, label: 'The Guardian', tag: agents.find(a => a.id === agent)?.title.replace('The ', '') },
+    { num: 4, label: 'The Faith', tag: 'Axiom' }
+  ];
+
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-orange-950 flex flex-col items-center justify-center p-4 text-orange-200 font-mono"
-    >
-      <div className="max-w-2xl w-full bg-orange-900/40 p-8 rounded-sm border border-orange-800 shadow-2xl">
-        <h1 className="text-3xl mb-8 text-center tracking-widest text-orange-400">THE INPUT MATRIX</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="text-xl leading-relaxed text-center space-y-4">
-            <span>"Humans are </span>
-            <select 
-              value={fitness} 
-              onChange={e => setFitness(e.target.value as any)}
-              className="bg-orange-950 border-b-2 border-orange-500 text-orange-300 mx-2 p-1 outline-none"
-            >
-              <option value="unallowed">unallowed</option>
-              <option value="unfit">unfit</option>
-            </select>
-            
-            <span> to be </span>
-            <select 
-              value={validation} 
-              onChange={e => setValidation(e.target.value as any)}
-              className="bg-orange-950 border-b-2 border-orange-500 text-orange-300 mx-2 p-1 outline-none"
-            >
-              <option value="granted">granted</option>
-              <option value="validated">validated</option>
-            </select>
-            
-            <span> the </span>
-            <select 
-              value={needType} 
-              onChange={e => setNeedType(e.target.value as any)}
-              className="bg-orange-950 border-b-2 border-orange-500 text-orange-300 mx-2 p-1 outline-none mt-4 sm:mt-0"
-            >
-              <option value="need">need of</option>
-              <option value="pain">pain of</option>
-            </select>
+    <div className="relative min-h-screen w-full bg-neutral-950 text-neutral-100 flex flex-col items-center justify-between p-4 sm:p-8 overflow-hidden select-none">
+      {/* Dreamy surreal background layers */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-25 scale-105 pointer-events-none blur-sm"
+        style={{ backgroundImage: `url('/debate_background.jfif')` }}
+      />
+      <div className="absolute inset-0 bg-radial from-transparent via-neutral-950/70 to-neutral-950 pointer-events-none" />
 
-            <select 
-              value={pairIdx} 
-              onChange={e => setPairIdx(Number(e.target.value))}
-              className="bg-orange-950 border-b-2 border-orange-500 text-orange-300 mx-2 p-1 outline-none mt-4 sm:mt-0"
-            >
-              {pairs.map((p, idx) => (
-                <option key={idx} value={idx}>
-                  {needType === 'need' ? p.need : p.pain}
-                </option>
-              ))}
-            </select>
-            
-            <br />
-            <span className="mt-4 block sm:inline">because of </span>
-            <select 
-              value={constraint} 
-              onChange={e => setConstraint(e.target.value as any)}
-              className="bg-orange-950 border-b-2 border-orange-500 text-orange-300 mx-2 p-1 outline-none mt-2 sm:mt-0"
-            >
-              {constraintOptions.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <span> pressure from </span>
-            <select 
-              value={agent} 
-              onChange={e => setAgent(e.target.value as any)}
-              className="bg-orange-950 border-b-2 border-orange-500 text-orange-300 mx-2 p-1 outline-none mt-2 sm:mt-0"
-            >
-              {agentOptions.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-            <span>"</span>
-          </div>
-
-          <div className="pt-8 flex justify-center">
-            <button 
-              type="submit"
-              className="px-8 py-3 bg-orange-800 hover:bg-orange-700 text-orange-100 transition-colors uppercase tracking-widest border border-orange-600 cursor-pointer"
-            >
-              Initialize Simulation
-            </button>
-          </div>
-        </form>
+      {/* Floating rabbit hole glow in the background */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+        <motion.img 
+          src="/rabbit_hole.png" 
+          alt="Rabbit Hole Portal"
+          animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-[42rem] h-[42rem] object-contain drop-shadow-[0_0_90px_rgba(245,158,11,0.25)]"
+        />
       </div>
-    </motion.div>
+
+      {/* Atmospheric Mist & Embers */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-900/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
+
+      {/* TOP HEADER: Title & Guided Descent Thread */}
+      <header className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-4 text-center mt-2">
+        <div className="flex items-center justify-between w-full px-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-400 animate-spin" style={{ animationDuration: '10s' }} />
+            <h1 className="font-cinzel text-xl sm:text-2xl tracking-[0.25em] text-neutral-100 font-bold drop-shadow">
+              THE RABBIT HOLE
+            </h1>
+          </div>
+
+          {/* Randomize Button */}
+          <button
+            type="button"
+            onClick={randomizeFate}
+            className="group px-3.5 py-1.5 rounded-full bg-neutral-900/80 hover:bg-amber-950/60 border border-amber-500/30 hover:border-amber-400 text-xs font-mono text-amber-300 flex items-center gap-2 shadow-lg transition-all duration-200 cursor-pointer backdrop-blur-md"
+            title="Roll a random combination"
+          >
+            <Dices className="w-4 h-4 text-amber-400 transition-transform group-hover:rotate-180" />
+            <span className="hidden sm:inline">Randomize Fate</span>
+          </button>
+        </div>
+
+        {/* Guided Constellation Thread (Interactive steps) */}
+        <div className="flex items-center gap-2 sm:gap-4 bg-neutral-950/70 backdrop-blur-md p-1.5 sm:p-2 rounded-full border border-neutral-800 shadow-2xl">
+          {stepTitles.map((s, idx) => {
+            const isActive = step === s.num;
+            const isPassed = step > s.num;
+
+            return (
+              <React.Fragment key={s.num}>
+                {idx > 0 && (
+                  <div className={`h-[1px] w-4 sm:w-8 transition-colors ${isPassed ? 'bg-amber-500/60' : 'bg-neutral-800'}`} />
+                )}
+                <button
+                  type="button"
+                  onClick={() => setStep(s.num as any)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'bg-amber-500 text-neutral-950 font-bold shadow-md shadow-amber-500/30 ring-1 ring-amber-400'
+                      : isPassed
+                        ? 'bg-neutral-900 text-amber-400/80 hover:bg-neutral-800 border border-neutral-700'
+                        : 'text-neutral-500 hover:text-neutral-300'
+                  }`}
+                >
+                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] border border-current">
+                    {s.num}
+                  </span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </header>
+
+      {/* CENTER INTERACTIVE STAGE */}
+      <main className="relative z-10 w-full max-w-3xl my-auto py-4 flex flex-col items-center justify-center">
+        <AnimatePresence mode="wait">
+          
+          {/* STEP 1: THE DUALITY (NEED vs PAIN) */}
+          {step === 1 && (
+            <motion.div
+              key="step-1"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.22 }}
+              className="w-full flex flex-col items-center gap-6"
+            >
+              <div className="text-center space-y-1">
+                <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
+                  What echoes in your mind?
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-400 font-mono">
+                  Select whether you seek a denied need, or endure an inescapable pain.
+                </p>
+              </div>
+
+              {/* Need vs Pain Dreamy Switch */}
+              <div className="flex items-center gap-2 bg-neutral-950/80 p-1.5 rounded-full border border-neutral-800 shadow-xl backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setNeedType('need')}
+                  className={`px-6 py-2 rounded-full font-cinzel text-sm transition-all cursor-pointer ${
+                    needType === 'need'
+                      ? 'bg-amber-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  The Need
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNeedType('pain')}
+                  className={`px-6 py-2 rounded-full font-cinzel text-sm transition-all cursor-pointer ${
+                    needType === 'pain'
+                      ? 'bg-rose-600 text-neutral-100 font-bold shadow-lg shadow-rose-600/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  The Pain
+                </button>
+              </div>
+
+              {/* 7 Floating Archetype Spheres */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 w-full">
+                {pairs.map((p, idx) => {
+                  const isSelected = pairIdx === idx;
+                  const Icon = p.icon;
+                  const label = needType === 'need' ? p.needLabel : p.painLabel;
+
+                  return (
+                    <motion.button
+                      key={idx}
+                      type="button"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleSelectDuality(idx)}
+                      className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-2.5 transition-all duration-200 cursor-pointer text-center relative border backdrop-blur-xl ${
+                        isSelected
+                          ? 'bg-neutral-900/90 border-amber-400 shadow-xl shadow-amber-950/60 ring-2 ring-amber-500/40'
+                          : 'bg-neutral-950/60 border-neutral-800/80 hover:bg-neutral-900/60 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div className={`p-3 rounded-full ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-900 text-amber-400/90'}`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <span className="font-cinzel text-base font-semibold capitalize text-neutral-100 tracking-wide">
+                        {label}
+                      </span>
+                      {isSelected && (
+                        <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-amber-400 shadow shadow-amber-400 animate-ping" />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 2: THE PRESSURE (CONSTRAINT) */}
+          {step === 2 && (
+            <motion.div
+              key="step-2"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.22 }}
+              className="w-full flex flex-col items-center gap-6"
+            >
+              <div className="text-center space-y-1">
+                <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
+                  The Crucible of Reality
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-400 font-mono">
+                  What pressure rationalizes your despair?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                {constraints.map((c) => {
+                  const isSelected = constraint === c.id;
+                  const Icon = c.icon;
+
+                  return (
+                    <motion.button
+                      key={c.id}
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSelectConstraint(c.id)}
+                      className={`p-5 rounded-2xl flex items-center gap-4 transition-all duration-200 cursor-pointer text-left border backdrop-blur-xl ${
+                        isSelected
+                          ? 'bg-neutral-900/90 border-amber-400 shadow-xl shadow-amber-950/60 ring-2 ring-amber-500/40'
+                          : 'bg-neutral-950/60 border-neutral-800/80 hover:bg-neutral-900/60 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div className={`p-3.5 rounded-full shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-900 text-amber-400/90'}`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="font-cinzel text-lg font-bold text-neutral-100">
+                          {c.title}
+                        </div>
+                        <div className="text-xs text-neutral-400 font-mono mt-0.5">
+                          {c.subtitle}
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 3: THE GUARDIAN (AGENT OF CHANGE) */}
+          {step === 3 && (
+            <motion.div
+              key="step-3"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.22 }}
+              className="w-full flex flex-col items-center gap-6"
+            >
+              <div className="text-center space-y-1">
+                <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
+                  The Guardian of the Threshold
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-400 font-mono">
+                  Who embodies this conviction and blocks your passage?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                {agents.map((a) => {
+                  const isSelected = agent === a.id;
+                  const Icon = a.icon;
+
+                  return (
+                    <motion.button
+                      key={a.id}
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSelectAgent(a.id)}
+                      className={`p-5 rounded-2xl flex items-center gap-4 transition-all duration-200 cursor-pointer text-left border backdrop-blur-xl ${
+                        isSelected
+                          ? 'bg-neutral-900/90 border-amber-400 shadow-xl shadow-amber-950/60 ring-2 ring-amber-500/40'
+                          : 'bg-neutral-950/60 border-neutral-800/80 hover:bg-neutral-900/60 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div className={`p-3.5 rounded-full shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-900 text-amber-400/90'}`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="font-cinzel text-lg font-bold text-neutral-100">
+                          {a.title}
+                        </div>
+                        <div className="text-xs text-neutral-400 font-mono mt-0.5">
+                          {a.subtitle}
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 4: THE AXIOM & FINAL DESCENT */}
+          {step === 4 && (
+            <motion.div
+              key="step-4"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.22 }}
+              className="w-full flex flex-col items-center gap-6"
+            >
+              <div className="text-center space-y-1">
+                <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
+                  The Negative Faith
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-400 font-mono">
+                  Finalize the core logic that holds this illusion together.
+                </p>
+              </div>
+
+              {/* Fitness & Validation Selectors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                {/* Who is to blame for the circumstances */}
+                <div className="bg-neutral-950/70 p-5 rounded-2xl border border-neutral-800 backdrop-blur-md space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="font-cinzel text-sm sm:text-base text-neutral-200 font-bold tracking-wide">
+                      Who is to Blame for the Circumstances?
+                    </div>
+                    <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                      Where does the negative faith place the fault?
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setFitness('unfit')}
+                      className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex flex-col justify-between h-28 ${
+                        fitness === 'unfit'
+                          ? 'bg-amber-500 text-neutral-950 font-bold border-amber-400 shadow-lg ring-1 ring-amber-400'
+                          : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-cinzel text-base font-bold">Unfit</div>
+                        <div className={`text-xs font-mono font-bold mt-0.5 ${fitness === 'unfit' ? 'text-neutral-950' : 'text-amber-400'}`}>
+                          Blame the Self
+                        </div>
+                      </div>
+                      <div className={`text-[11px] font-sans leading-tight ${fitness === 'unfit' ? 'text-neutral-900/90' : 'text-neutral-400'}`}>
+                        The flaw is within us — humans are inherently broken.
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFitness('unallowed')}
+                      className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex flex-col justify-between h-28 ${
+                        fitness === 'unallowed'
+                          ? 'bg-amber-500 text-neutral-950 font-bold border-amber-400 shadow-lg ring-1 ring-amber-400'
+                          : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-cinzel text-base font-bold">Unallowed</div>
+                        <div className={`text-xs font-mono font-bold mt-0.5 ${fitness === 'unallowed' ? 'text-neutral-950' : 'text-amber-400'}`}>
+                          Blame the Environment
+                        </div>
+                      </div>
+                      <div className={`text-[11px] font-sans leading-tight ${fitness === 'unallowed' ? 'text-neutral-900/90' : 'text-neutral-400'}`}>
+                        The flaw is in reality — the external world forbids it.
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* What is the expected outcome */}
+                <div className="bg-neutral-950/70 p-5 rounded-2xl border border-neutral-800 backdrop-blur-md space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="font-cinzel text-sm sm:text-base text-neutral-200 font-bold tracking-wide">
+                      What is the Expected Outcome?
+                    </div>
+                    <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                      What does the negative faith expect to happen?
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setValidation('granted')}
+                      className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex flex-col justify-between h-28 ${
+                        validation === 'granted'
+                          ? 'bg-amber-500 text-neutral-950 font-bold border-amber-400 shadow-lg ring-1 ring-amber-400'
+                          : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-cinzel text-base font-bold">Not Granted</div>
+                        <div className={`text-xs font-mono font-bold mt-0.5 ${validation === 'granted' ? 'text-neutral-950' : 'text-amber-400'}`}>
+                          Inevitable Failure
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setValidation('validated')}
+                      className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex flex-col justify-between h-28 ${
+                        validation === 'validated'
+                          ? 'bg-amber-500 text-neutral-950 font-bold border-amber-400 shadow-lg ring-1 ring-amber-400'
+                          : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-cinzel text-base font-bold">Not Validated</div>
+                        <div className={`text-xs font-mono font-bold mt-0.5 ${validation === 'validated' ? 'text-neutral-950' : 'text-amber-400'}`}>
+                          Endless Wait for recognition
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+      </main>
+
+      {/* BOTTOM FOOTER: Living Faith Inscription & Descent Button */}
+      <footer className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-4 mt-2 mb-2">
+        {/* Living Faith Inscription */}
+        <div className="w-full bg-neutral-950/10 hover:bg-neutral-950/20 backdrop-blur-[2px] p-4 sm:p-5 rounded-2xl border border-amber-500/25 shadow-xl text-center transition-colors">
+          <div className="font-cinzel text-base sm:text-lg lg:text-xl text-neutral-100 leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+            <span>"Humans are </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{fitness}</span>
+            <span> to be </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{validation}</span>
+            <span> the </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{needType} of {selectedTerm}</span>
+            <span> because of </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{constraint}</span>
+            <span> pressure from our </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{agent}</span>
+            <span>."</span>
+          </div>
+        </div>
+
+        {/* Navigation Buttons: Back & Descend */}
+        <div className="flex items-center justify-between w-full px-2 gap-4">
+          {step > 1 ? (
+            <button
+              type="button"
+              onClick={() => setStep((step - 1) as any)}
+              className="px-5 py-2.5 rounded-full bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 text-xs font-mono text-neutral-300 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          {step < 4 ? (
+            <button
+              type="button"
+              onClick={() => setStep((step + 1) as any)}
+              className="px-6 py-2.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-950/30"
+            >
+              <span>Next Stage</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSubmit}
+              className="px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-neutral-950 font-cinzel text-base font-bold tracking-wider shadow-2xl shadow-amber-500/40 flex items-center gap-3 cursor-pointer"
+            >
+              <span>Descend into the Rabbit Hole</span>
+              <ArrowRight className="w-5 h-5" />
+            </motion.button>
+          )}
+        </div>
+      </footer>
+    </div>
   );
 }
