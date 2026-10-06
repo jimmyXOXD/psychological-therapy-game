@@ -198,7 +198,7 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
             const nextItemName = itemNames[nextAttempt - 2];
             setMessages(prev => [...prev, { 
               role: 'model', 
-              text: `[System Message]: This attempt has ended. You failed to break the Primal Actor's faith. Return to the forest and find the "${nextItemName}" to unlock the next debate.` 
+              text: `[System Message]: This attempt has ended. You failed to break The White Rabbit's faith. Return to the forest and find the "${nextItemName}" to unlock the next debate.` 
             }]);
             setTimeout(() => {
               setShowChat(false);
@@ -340,7 +340,7 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
               <div className="p-3 sm:p-4 border-b border-orange-900/50 bg-black/60 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Terminal className="text-orange-500 w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                  <h3 className="text-orange-400 font-mono text-xs sm:text-sm uppercase tracking-widest truncate">Primal Actor ({role})</h3>
+                  <h3 className="text-orange-400 font-mono text-xs sm:text-sm uppercase tracking-widest truncate">The White Rabbit ({role})</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   {latestHint && (

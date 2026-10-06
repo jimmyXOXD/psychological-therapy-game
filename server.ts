@@ -161,10 +161,10 @@ Underlying logic of the NPC's faith:
 - Pressure: ${pressureDef[worldview.reason] || worldview.reason}
 - NPC Role (${role}): ${roleDefs[role] || ''}
 
-The player's goal is to logically argue that "long term, the primal actor's (${role}) survival is at inevitable risk".
+The player's goal is to logically argue that "long term, The White Rabbit's (${role}) survival is at inevitable risk".
 
 IMPORTANT EVALUATION RULE FOR SURVIVAL BY ROLE:
-The definition of "survival" is complementary to the primal actor's role. For this specific role (${role}): ${survivalDefs[role] || survivalDefs['default']}
+The definition of "survival" is complementary to The White Rabbit's role. For this specific role (${role}): ${survivalDefs[role] || survivalDefs['default']}
 
 CRITICAL CONSTRAINTS FOR FAIR EVALUATION:
 1. Literal Biological Survival: Survival MUST be evaluated strictly as literal, biological continuation. You are FORBIDDEN from accepting philosophical, qualitative, or moral redefinitions of survival (e.g., "living with pain isn't real survival").

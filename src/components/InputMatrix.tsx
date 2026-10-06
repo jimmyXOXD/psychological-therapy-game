@@ -18,6 +18,7 @@ import {
   Users2, 
   EyeOff, 
   Sparkles, 
+  Orbit,
   ArrowRight,
   ArrowLeft,
   Dices
@@ -153,8 +154,16 @@ export function InputMatrix({ onComplete }: Props) {
       <header className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-4 text-center mt-2">
         <div className="flex items-center justify-between w-full px-2">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400 animate-spin" style={{ animationDuration: '10s' }} />
-            <h1 className="font-cinzel text-xl sm:text-2xl tracking-[0.25em] text-neutral-100 font-bold drop-shadow">
+            <h1 className="
+              font-psychedelic text-2xl sm:text-3xl
+              tracking-[0.14em]
+              font-bold
+              bg-gradient-to-r from-violet-300 via-fuchsia-400 via-cyan-300 via-amber-200 to-violet-300
+              bg-clip-text text-transparent
+              animate-psychedelic-flow
+              animate-rabbit-breathe
+              inline-block select-none
+            ">
               THE RABBIT HOLE
             </h1>
           </div>

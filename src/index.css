@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Shrikhand&family=Cinzel+Decorative:wght@700;900&family=Press+Start+2P&display=swap');
 @import "tailwindcss";
 
 @layer base {
@@ -11,12 +11,60 @@
   font-family: 'Cinzel', serif;
 }
 
+.font-cinzel-decorative {
+  font-family: 'Cinzel Decorative', cursive, serif;
+}
+
+.font-psychedelic {
+  font-family: 'Shrikhand', 'Cinzel Decorative', cursive, serif;
+}
+
 .font-mono-clean {
   font-family: 'JetBrains Mono', monospace;
 }
 
 .font-pixel {
   font-family: 'Press Start 2P', monospace;
+}
+
+@keyframes rabbit-breathe {
+  0%, 100% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 10px rgba(217, 70, 239, 0.65)) drop-shadow(0 0 20px rgba(168, 85, 247, 0.45));
+  }
+  25% {
+    transform: translateY(-2.5px) scale(1.025) rotate(-0.9deg);
+    filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.75)) drop-shadow(0 0 26px rgba(168, 85, 247, 0.5));
+  }
+  50% {
+    transform: translateY(1.2px) scale(0.99) rotate(0.7deg);
+    filter: drop-shadow(0 0 12px rgba(244, 114, 182, 0.75)) drop-shadow(0 0 24px rgba(251, 191, 36, 0.4));
+  }
+  75% {
+    transform: translateY(-1.5px) scale(1.018) rotate(-0.5deg);
+    filter: drop-shadow(0 0 16px rgba(192, 132, 252, 0.8)) drop-shadow(0 0 28px rgba(56, 189, 248, 0.45));
+  }
+}
+
+@keyframes psychedelic-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-rabbit-breathe {
+  animation: rabbit-breathe 4.5s ease-in-out infinite;
+}
+
+.animate-psychedelic-flow {
+  background-size: 250% 250%;
+  animation: psychedelic-flow 6s ease-in-out infinite;
 }
 
 .pixel-corners {
