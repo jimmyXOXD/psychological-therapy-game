@@ -155,13 +155,10 @@ export function InputMatrix({ onComplete }: Props) {
         <div className="flex items-center justify-between w-full px-2">
           <div className="flex items-center gap-2">
             <h1 className="
-              font-psychedelic text-2xl sm:text-3xl
-              tracking-[0.14em]
+              font-psychedelic text-2xl sm:text-4xl
+              tracking-[0.16em]
               font-bold
-              bg-gradient-to-r from-violet-300 via-fuchsia-400 via-cyan-300 via-amber-200 to-violet-300
-              bg-clip-text text-transparent
-              animate-psychedelic-flow
-              animate-rabbit-breathe
+              animate-freaky-forest
               inline-block select-none
             ">
               THE RABBIT HOLE

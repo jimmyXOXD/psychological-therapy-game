@@ -59,6 +59,10 @@ function fbm(x: number, y: number) {
 // Toggle dynamic 2.5D swaying grass blades and movement logic (set to true to re-enable)
 export const ENABLE_DYNAMIC_GRASS = true;
 
+// Global tree size scale factor (e.g. 0.45 = tiny, 0.65 = small/compact, 1.0 = standard, 1.4 = large)
+// Easily adjust this single number to change the size of all trees across the entire game world!
+export const TREE_SIZE_SCALE = 0.9;
+
 // Max health of the infected flora in the hope minigame (easy to configure)
 export const INFECTED_FLORA_MAX_HP = 10;
 
@@ -102,6 +106,7 @@ export function GameCanvas({
   const birdUpImgRef = useRef<HTMLImageElement | null>(null);
   const birdDownImgRef = useRef<HTMLImageElement | null>(null);
   const birdNestImgRef = useRef<HTMLImageElement | null>(null);
+  const treeImgsRef = useRef<(HTMLImageElement | null)[]>([]);
   const grassBladesRef = useRef<any[]>([]);
   const grassSpritesRef = useRef<HTMLCanvasElement[]>([]);
   const grassGridRef = useRef<any[][][]>([]);
@@ -170,6 +175,18 @@ export function GameCanvas({
     const iBirdNest = new Image();
     iBirdNest.src = '/bird_nest.png';
     iBirdNest.onload = () => { birdNestImgRef.current = iBirdNest; };
+
+    // Preload 8 tree assets (tree1.png to tree8.png)
+    const treeImgs: (HTMLImageElement | null)[] = [];
+    for (let idx = 1; idx <= 8; idx++) {
+      const img = new Image();
+      img.src = `/tree${idx}.png`;
+      img.onload = () => {
+        treeImgs[idx] = img;
+      };
+      treeImgs[idx] = img;
+    }
+    treeImgsRef.current = treeImgs;
 
     // Load white_grass.png and pre-tint sprites with vertical ground-gradient blending
     const iGrass = new Image();
@@ -685,29 +702,57 @@ export function GameCanvas({
         setHeroThought("This is the final threshold. To challenge their ancient despair and end this cycle, I must recover onr more secret from the forest!.");
       }
 
-      // Spawning decorative trees (scary trees and lush oaks) to fill the forest
-      for (let i = 0; i < 200; i++) {
-        const tx = Math.random() * MAP_SIZE;
-        const ty = Math.random() * MAP_SIZE;
-        const distFromCenter = Math.hypot(tx - CENTER, ty - CENTER);
-        
-        // Avoid starting area and primal actor center area, and keep inside circular map
+      // Spawning decorative trees (scary trees: tree1, tree2, tree8; lush oaks: tree3 to tree7)
+      const scaryTreeAssets = [1];
+      const oakTreeAssets = [3, 4, 5];
+      const targetTreeCount = 300; // High count for a dense, lush mystical forest
+      let spawnedTrees = 0;
+      let treeAttempts = 0;
+      const maxTreeAttempts = 3500;
+
+      while (spawnedTrees < targetTreeCount && treeAttempts < maxTreeAttempts) {
+        treeAttempts++;
+        // Distribute uniformly across circular map area
+        const angle = Math.random() * Math.PI * 2;
+        // Keep inside circular map, between radius 200 and (OUTSKIRTS_RADIUS - 80)
+        const r = 200 + Math.sqrt(Math.random()) * (OUTSKIRTS_RADIUS - 280);
+        const tx = CENTER + Math.cos(angle) * r;
+        const ty = CENTER + Math.sin(angle) * r;
+
+        // Avoid starting area
         const distToStart = Math.hypot(tx - (CENTER - 500), ty - (CENTER - 500));
-        // Keep clear of any forest illness stains, creeping threats, caged birds, forest fires, and bird nests
+        if (distToStart < 160) continue;
+
+        // Keep clear of any interactive task obstacles and key points
         const nearObstacle = state.entities.some(e => 
-          (e.type === 'task_illness_stain' || e.type === 'task_creeping_illness' || e.type === 'task_caged_bird' || e.type === 'task_forest_fire' || e.type === 'task_push_bird' || e.type === 'task_bird_nest') && 
-          Math.hypot(tx - e.x, ty - e.y) < 130
+          (e.type === 'task_illness_stain' || e.type === 'task_creeping_illness' || e.type === 'task_caged_bird' || e.type === 'task_forest_fire' || e.type === 'task_push_bird' || e.type === 'task_bird_nest' || e.type === 'task_running_friend' || e.type === 'task_hidden_friend' || e.type === 'rabbit_hole') && 
+          Math.hypot(tx - e.x, ty - e.y) < 120
         );
-        if (!nearObstacle && distToStart > 180 && distFromCenter > 180 && distFromCenter < OUTSKIRTS_RADIUS) {
-          state.entities.push({
-            id: `tree_${i}`,
-            type: Math.random() > 0.45 ? 'tree_scary' : 'tree_oak',
-            x: tx,
-            y: ty,
-            radius: 20,
-            scale: 0.75 + Math.random() * 0.45
-          });
-        }
+        if (nearObstacle) continue;
+
+        // Minimum spacing between tree trunks so they do not overlap into a mess
+        const nearExistingTree = state.entities.some(e =>
+          (e.type === 'tree_scary' || e.type === 'tree_oak') &&
+          Math.hypot(tx - e.x, ty - e.y) < 62
+        );
+        if (nearExistingTree) continue;
+
+        const isScary = Math.random() > 0.45;
+        const treeAssetIdx = isScary
+          ? scaryTreeAssets[Math.floor(Math.random() * scaryTreeAssets.length)]
+          : oakTreeAssets[Math.floor(Math.random() * oakTreeAssets.length)];
+
+        // Tree scale (modulated globally by TREE_SIZE_SCALE constant)
+        state.entities.push({
+          id: `tree_${spawnedTrees}`,
+          type: isScary ? 'tree_scary' : 'tree_oak',
+          treeAssetIdx,
+          x: tx,
+          y: ty,
+          radius: 20 * TREE_SIZE_SCALE,
+          scale: 0.95 + Math.random() * 0.35
+        });
+        spawnedTrees++;
       }
 
       // Spawn flowers in the outskirts to intrigue the player
@@ -1891,105 +1936,147 @@ export function GameCanvas({
           ctx.restore();
         }
       } else if (ent.type === 'tree_scary') {
-        // Scary twisted dead tree (scary tree.jfif)
-        const sc = ent.scale || 1;
-        ctx.scale(sc, sc);
+        const sc = (ent.scale || 1.0) * TREE_SIZE_SCALE;
+        const img = ent.treeAssetIdx ? treeImgsRef.current[ent.treeAssetIdx] : null;
 
-        // Shadow
-        ctx.save();
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath();
-        ctx.ellipse(0, 5, 35, 10, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.save();
+          ctx.scale(sc, sc);
 
-        // Spiraling trunk (twisted cool grays)
-        ctx.fillStyle = '#3a4146'; // trunk gray
-        ctx.strokeStyle = '#1e2224'; // bark lines
-        ctx.lineWidth = 3;
+          // Atmospheric soft ground shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.38)';
+          ctx.beginPath();
+          ctx.ellipse(0, 4, 46, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
 
-        // Draw twisted roots and trunk
-        ctx.beginPath();
-        ctx.moveTo(-15, 5);
-        ctx.quadraticCurveTo(-20, -40, -10, -70);
-        ctx.lineTo(10, -70);
-        ctx.quadraticCurveTo(20, -40, 15, 5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+          const h = 190;
+          const w = h * (img.width / img.height || 1);
+          // Bottom-center anchor at base of trunk
+          ctx.drawImage(img, -w / 2, -h + 12, w, h);
+          ctx.restore();
+        } else {
+          // Fallback to procedural scary dead tree
+          ctx.save();
+          ctx.scale(sc * 1.35, sc * 1.35);
 
-        // Draw spiral ridges on trunk
-        ctx.beginPath();
-        ctx.moveTo(-10, -10); ctx.quadraticCurveTo(5, -25, -5, -45);
-        ctx.moveTo(-5, -30); ctx.quadraticCurveTo(10, -45, 0, -65);
-        ctx.stroke();
+          // Shadow
+          ctx.save();
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.beginPath();
+          ctx.ellipse(0, 5, 45, 13, 0, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
 
-        // Branches
-        ctx.strokeStyle = '#3a4146';
-        ctx.lineWidth = 6;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        // Left Branch
-        ctx.moveTo(-5, -60); ctx.quadraticCurveTo(-25, -80, -35, -110);
-        // Right Branch
-        ctx.moveTo(5, -60); ctx.quadraticCurveTo(25, -80, 35, -110);
-        ctx.stroke();
+          // Spiraling trunk (twisted cool grays)
+          ctx.fillStyle = '#3a4146'; // trunk gray
+          ctx.strokeStyle = '#1e2224'; // bark lines
+          ctx.lineWidth = 3;
 
-        // Dark sparse foliage clumps
-        ctx.fillStyle = '#1c2124'; // eerie dark color
-        ctx.beginPath(); ctx.arc(-35, -115, 25, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(35, -115, 25, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -130, 30, 0, Math.PI*2); ctx.fill();
+          // Draw twisted roots and trunk
+          ctx.beginPath();
+          ctx.moveTo(-15, 5);
+          ctx.quadraticCurveTo(-20, -40, -10, -70);
+          ctx.lineTo(10, -70);
+          ctx.quadraticCurveTo(20, -40, 15, 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Draw spiral ridges on trunk
+          ctx.beginPath();
+          ctx.moveTo(-10, -10); ctx.quadraticCurveTo(5, -25, -5, -45);
+          ctx.moveTo(-5, -30); ctx.quadraticCurveTo(10, -45, 0, -65);
+          ctx.stroke();
+
+          // Branches
+          ctx.strokeStyle = '#3a4146';
+          ctx.lineWidth = 6;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          // Left Branch
+          ctx.moveTo(-5, -60); ctx.quadraticCurveTo(-25, -80, -35, -110);
+          // Right Branch
+          ctx.moveTo(5, -60); ctx.quadraticCurveTo(25, -80, 35, -110);
+          ctx.stroke();
+
+          // Dark sparse foliage clumps
+          ctx.fillStyle = '#1c2124'; // eerie dark color
+          ctx.beginPath(); ctx.arc(-35, -115, 25, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(35, -115, 25, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -130, 30, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        }
 
       } else if (ent.type === 'tree_oak') {
-        // Lush golden twisted oak (1696x2528_oak.jfif)
-        const sc = ent.scale || 1;
-        ctx.scale(sc, sc);
+        const sc = (ent.scale || 1.0) * TREE_SIZE_SCALE;
+        const img = ent.treeAssetIdx ? treeImgsRef.current[ent.treeAssetIdx] : null;
 
-        // Shadow
-        ctx.save();
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath();
-        ctx.ellipse(0, 5, 45, 12, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.save();
+          ctx.scale(sc, sc);
 
-        // Warm brown twisted trunk
-        ctx.fillStyle = '#5c4033'; // deep warm brown
-        ctx.strokeStyle = '#2b1e17'; // darker lines
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(-20, 5);
-        ctx.quadraticCurveTo(-25, -30, -12, -60);
-        ctx.lineTo(12, -60);
-        ctx.quadraticCurveTo(25, -30, 20, 5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+          // Atmospheric soft ground shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.38)';
+          ctx.beginPath();
+          ctx.ellipse(0, 4, 52, 16, 0, 0, Math.PI * 2);
+          ctx.fill();
 
-        // Branches
-        ctx.strokeStyle = '#5c4033';
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(-8, -50); ctx.quadraticCurveTo(-30, -75, -45, -95);
-        ctx.moveTo(8, -50); ctx.quadraticCurveTo(30, -75, 45, -95);
-        ctx.stroke();
+          const h = 200;
+          const w = h * (img.width / img.height || 1);
+          // Bottom-center anchor at base of trunk
+          ctx.drawImage(img, -w / 2, -h + 14, w, h);
+          ctx.restore();
+        } else {
+          // Fallback to procedural golden twisted oak
+          ctx.save();
+          ctx.scale(sc * 1.35, sc * 1.35);
 
-        // Gorgeous golden yellow leaves clumps
-        ctx.fillStyle = '#f4c430'; // primary golden yellow
-        ctx.beginPath(); ctx.arc(-45, -100, 35, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(45, -100, 35, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -120, 45, 0, Math.PI*2); ctx.fill();
+          // Shadow
+          ctx.save();
+          ctx.shadowBlur = 25;
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.beginPath();
+          ctx.ellipse(0, 5, 55, 15, 0, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
 
-        // Highlights in brighter gold
-        ctx.fillStyle = '#ffd700';
-        ctx.beginPath(); ctx.arc(-45, -105, 22, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(45, -105, 22, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -128, 30, 0, Math.PI*2); ctx.fill();
+          // Warm brown twisted trunk
+          ctx.fillStyle = '#5c4033'; // deep warm brown
+          ctx.strokeStyle = '#2b1e17'; // darker lines
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(-20, 5);
+          ctx.quadraticCurveTo(-25, -30, -12, -60);
+          ctx.lineTo(12, -60);
+          ctx.quadraticCurveTo(25, -30, 20, 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Branches
+          ctx.strokeStyle = '#5c4033';
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.moveTo(-8, -50); ctx.quadraticCurveTo(-30, -75, -45, -95);
+          ctx.moveTo(8, -50); ctx.quadraticCurveTo(30, -75, 45, -95);
+          ctx.stroke();
+
+          // Gorgeous golden yellow leaves clumps
+          ctx.fillStyle = '#f4c430'; // primary golden yellow
+          ctx.beginPath(); ctx.arc(-45, -100, 35, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(45, -100, 35, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -120, 45, 0, Math.PI*2); ctx.fill();
+
+          // Highlights in brighter gold
+          ctx.fillStyle = '#ffd700';
+          ctx.beginPath(); ctx.arc(-45, -105, 22, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(45, -105, 22, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -128, 30, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        }
 
       } else if (ent.type === 'hazard_spike' || ent.type === 'task_mine') {
         // Spike Bush (spike bush.jfif)
@@ -3050,12 +3137,14 @@ export function GameCanvas({
       ctx.arc(CENTER, CENTER, OUTSKIRTS_RADIUS, 0, Math.PI * 2); // Hard boundary line
       ctx.stroke();
 
+      // Viewport bounds for culling
+      const viewportLeft = state.player.x - (width / 2) / CAMERA_ZOOM;
+      const viewportRight = state.player.x + (width / 2) / CAMERA_ZOOM;
+      const viewportTop = state.player.y - (height / 2) / CAMERA_ZOOM;
+      const viewportBottom = state.player.y + (height / 2) / CAMERA_ZOOM;
+
       // Dynamic grass rendering with white_grass.png, wind noise modulation & character displacement
       if (ENABLE_DYNAMIC_GRASS && grassSpritesRef.current.length > 0 && grassGridRef.current.length > 0) {
-        const viewportLeft = state.player.x - (width / 2) / CAMERA_ZOOM;
-        const viewportRight = state.player.x + (width / 2) / CAMERA_ZOOM;
-        const viewportTop = state.player.y - (height / 2) / CAMERA_ZOOM;
-        const viewportBottom = state.player.y + (height / 2) / CAMERA_ZOOM;
         const timeSec = performance.now() * 0.001;
 
         // Active pushers (player and moving NPCs)
@@ -3179,6 +3268,15 @@ export function GameCanvas({
         if (item.isPlayer) {
           drawPlayer(ctx, item.x, item.y, state.player.targetX, state.player.targetY);
         } else {
+          // Viewport culling (with comfortable margin for large trees and wide shadows)
+          if (
+            item.x < viewportLeft - 220 ||
+            item.x > viewportRight + 220 ||
+            item.y < viewportTop - 340 ||
+            item.y > viewportBottom + 180
+          ) {
+            return;
+          }
           drawEntity(ctx, item);
         }
       });
