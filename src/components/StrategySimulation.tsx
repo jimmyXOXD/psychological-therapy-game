@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Worldview, ChatMessage } from '../types';
 import { GameCanvas } from './GameCanvas';
 import { motion } from 'motion/react';
-import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb, Eye, EyeOff } from 'lucide-react';
+import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb, Eye, EyeOff, Check, Copy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { registerWin, logTelemetry } from '../firebase';
 
@@ -18,6 +18,8 @@ export function StrategySimulation({ worldview }: Props) {
   const [isGameOver, setIsGameOver] = useState(false);
   const [evalSummary, setEvalSummary] = useState('');
   const [latestHint, setLatestHint] = useState<string | null>(null);
+  const [requestedHints, setRequestedHints] = useState<{ attempt: number; turn: number; hint: string }[]>([]);
+  const [isCopied, setIsCopied] = useState(false);
   
   // Custom mechanisms for debate attempts & special items
   const [debateAttempt, setDebateAttempt] = useState(1);
@@ -279,31 +281,145 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
       )}
 
       {isUnlocked && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="flex flex-col items-center gap-6 max-w-2xl text-center p-8 border border-green-900/50 bg-neutral-950 rounded-sm shadow-2xl shadow-green-900/20">
-            <Trophy className="w-16 h-16 text-green-500" />
-            <h2 className="text-3xl font-bold text-green-500 uppercase tracking-widest">Faith Dismantled</h2>
-            <p className="text-green-300 font-bold">
-              Congratulations! You successfully resolved the negative faith.
-            </p>
-            <div className="bg-black/50 p-6 rounded-sm border border-green-900/30 text-left text-sm text-neutral-300 leading-relaxed">
-              <span className="text-green-500 font-bold block mb-2 uppercase text-xs tracking-wider">Evaluator Summary:</span>
-              {evalSummary}
+        <div className="absolute inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="flex flex-col items-center gap-5 max-w-2xl w-full text-center p-6 sm:p-8 border border-green-800/60 bg-neutral-950 rounded-sm shadow-2xl shadow-green-950/40 max-h-[92vh] overflow-y-auto">
+            <div className="relative">
+              <div className="absolute -inset-2 bg-green-500/20 blur-xl rounded-full pointer-events-none" />
+              <Trophy className="w-16 h-16 text-green-400 relative drop-shadow-[0_0_15px_rgba(74,222,128,0.5)] animate-pulse" />
             </div>
-            <div className="flex gap-4 w-full mt-4">
+
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-green-400 uppercase tracking-widest font-mono">
+                Faith Dismantled
+              </h2>
+              <p className="text-green-300 font-mono text-sm mt-1">
+                Congratulations! You successfully resolved the negative faith.
+              </p>
+            </div>
+
+            {/* Worldview Badge Details */}
+            <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-neutral-400">
+              <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-800 rounded-sm">
+                Topic: <strong className="text-neutral-200">{worldview.selectedTerm}</strong> ({worldview.needType})
+              </span>
+              <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-800 rounded-sm">
+                Opponent: <strong className="text-neutral-200">{role}</strong>
+              </span>
+              <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-800 rounded-sm">
+                Constraint: <strong className="text-neutral-200">{worldview.reason}</strong>
+              </span>
+              <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-800 rounded-sm">
+                Debate Attempts: <strong className="text-neutral-200">{debateAttempt}/4</strong>
+              </span>
+            </div>
+
+            {/* Evaluator Summary */}
+            <div className="w-full bg-black/60 p-4 sm:p-5 rounded-sm border border-green-900/40 text-left text-xs sm:text-sm text-neutral-300 leading-relaxed font-mono">
+              <span className="text-green-400 font-bold flex items-center gap-1.5 uppercase text-[11px] tracking-wider mb-2">
+                <Terminal className="w-3.5 h-3.5" /> Evaluator Summary:
+              </span>
+              <p className="text-neutral-200">{evalSummary || 'Your logic prevailed. The negative faith is broken.'}</p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full mt-2 font-mono">
               <button 
-                onClick={() => {
-                  const chatText = messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n\n');
-                  navigator.clipboard.writeText(chatText);
-                  alert('Chat copied to clipboard!');
+                onClick={async () => {
+                  const allHintsList: string[] = [];
+                  requestedHints.forEach(h => {
+                    if (!allHintsList.includes(h.hint)) allHintsList.push(h.hint);
+                  });
+                  messages.forEach(m => {
+                    if (m.text.startsWith('[Evaluator Hint]:')) {
+                      const clean = m.text.replace('[Evaluator Hint]:', '').trim();
+                      if (!allHintsList.includes(clean)) allHintsList.push(clean);
+                    }
+                  });
+
+                  const header = [
+                    `==================================================`,
+                    `THE RABBIT HOLE - DEBATE TRANSCRIPT`,
+                    `==================================================`,
+                    `Worldview: ${worldview.fundamentalNeed.toUpperCase()} (${worldview.needType.toUpperCase()}: ${worldview.selectedTerm})`,
+                    `Opponent: The White Rabbit (${role.toUpperCase()})`,
+                    `Constraint: ${worldview.reason}`,
+                    `Result: NEGATIVE FAITH DISMANTLED (VICTORY)`,
+                    `Total Debate Attempts: ${debateAttempt} / 4`,
+                    `==================================================\n`
+                  ].join('\n');
+
+                  const formattedMessages = messages.map(m => {
+                    if (m.text.startsWith('[Evaluator Hint]:')) {
+                      const cleanHint = m.text.replace('[Evaluator Hint]:', '').trim();
+                      return `[EVALUATOR HINT]:\n${cleanHint}`;
+                    }
+                    if (m.text.startsWith('[System Message]:') || m.text.startsWith('[System Error]:')) {
+                      return `${m.text}`;
+                    }
+                    if (m.role === 'user') {
+                      return `PLAYER:\n${m.text}`;
+                    }
+                    return `THE WHITE RABBIT (${role.toUpperCase()}):\n${m.text}`;
+                  }).join('\n\n--------------------------------------------------\n\n');
+
+                  let hintsSection = '';
+                  if (allHintsList.length > 0) {
+                    hintsSection = [
+                      `\n\n==================================================`,
+                      `EVALUATOR HINTS REQUESTED DURING DEBATE (${allHintsList.length}):`,
+                      `==================================================`,
+                      ...allHintsList.map((h, i) => `[Hint #${i + 1}]:\n${h}`)
+                    ].join('\n');
+                  }
+
+                  const footer = [
+                    `\n\n==================================================`,
+                    `FINAL EVALUATION SUMMARY:`,
+                    `==================================================`,
+                    evalSummary || 'Your logic prevailed. The negative faith is broken.',
+                    `==================================================`
+                  ].join('\n');
+
+                  const fullExport = header + formattedMessages + hintsSection + footer;
+
+                  try {
+                    if (navigator?.clipboard?.writeText) {
+                      await navigator.clipboard.writeText(fullExport);
+                    } else {
+                      const textarea = document.createElement('textarea');
+                      textarea.value = fullExport;
+                      document.body.appendChild(textarea);
+                      textarea.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(textarea);
+                    }
+                    setIsCopied(true);
+                    setTimeout(() => setIsCopied(false), 3000);
+                  } catch (err) {
+                    console.error('Failed to copy transcript to clipboard', err);
+                  }
                 }}
-                className="flex-1 px-6 py-3 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 transition-colors border border-neutral-700 flex items-center justify-center gap-2"
+                className={`flex-1 px-5 py-3 transition-all border flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm ${
+                  isCopied 
+                    ? 'bg-green-950/80 border-green-500 text-green-300' 
+                    : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border-neutral-700 hover:border-neutral-500'
+                }`}
               >
-                Copy Chat
+                {isCopied ? (
+                  <>
+                    <Check className="w-4 h-4 text-green-400" />
+                    <span>Copied Chat & Hints!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 text-neutral-400" />
+                    <span>Copy Chat & Hints</span>
+                  </>
+                )}
               </button>
               <button 
                 onClick={() => window.location.reload()}
-                className="flex-1 px-6 py-3 bg-green-950 hover:bg-green-900 text-green-300 transition-colors border border-green-800 flex items-center justify-center gap-2"
+                className="flex-1 px-5 py-3 bg-green-950 hover:bg-green-900 text-green-300 transition-colors border border-green-800 hover:border-green-600 flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm"
               >
                 <RefreshCw className="w-4 h-4" /> Start New Simulation
               </button>
@@ -345,8 +461,13 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
                 <div className="flex items-center gap-2">
                   {latestHint && (
                     <button 
-                      onClick={() => setMessages(prev => [...prev, { role: 'model', text: `[Evaluator Hint]: ${latestHint}` }])} 
-                      className="text-yellow-500 hover:text-yellow-400 p-1 bg-yellow-950/40 rounded-sm border border-yellow-900/50 flex items-center gap-1 text-[11px] sm:text-xs px-2 cursor-pointer"
+                      onClick={() => {
+                        const hintText = latestHint;
+                        setRequestedHints(prev => [...prev, { attempt: debateAttempt, turn: promptsSentInAttempt, hint: hintText }]);
+                        setMessages(prev => [...prev, { role: 'model', text: `[Evaluator Hint]: ${hintText}` }]);
+                        setLatestHint(null);
+                      }} 
+                      className="text-yellow-500 hover:text-yellow-400 p-1 bg-yellow-950/40 rounded-sm border border-yellow-900/50 flex items-center gap-1 text-[11px] sm:text-xs px-2 cursor-pointer transition-colors"
                       title="Get a hint from the evaluator"
                     >
                       <Lightbulb className="w-3.5 h-3.5" /> Hint
