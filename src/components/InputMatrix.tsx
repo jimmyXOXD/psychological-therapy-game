@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Worldview, Constraint, AgentOfChange } from '../types';
+import { Worldview, Constraint, AgentOfChange, NEED_DEFINITIONS } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Heart, 
@@ -211,7 +211,7 @@ export function InputMatrix({ onComplete }: Props) {
       </header>
 
       {/* CENTER INTERACTIVE STAGE */}
-      <main className="relative z-10 w-full max-w-3xl my-auto py-4 flex flex-col items-center justify-center">
+      <main className="relative z-10 w-full max-w-4xl my-auto py-4 flex flex-col items-center justify-center">
         <AnimatePresence mode="wait">
           
           {/* STEP 1: THE DUALITY (NEED vs PAIN) */}
@@ -259,35 +259,55 @@ export function InputMatrix({ onComplete }: Props) {
                 </button>
               </div>
 
-              {/* 7 Floating Archetype Spheres */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 w-full">
+              {/* 7 Floating Archetype Spheres with Explanations */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 w-full">
                 {pairs.map((p, idx) => {
                   const isSelected = pairIdx === idx;
                   const Icon = p.icon;
+                  const termKey = needType === 'need' ? p.need : p.pain;
                   const label = needType === 'need' ? p.needLabel : p.painLabel;
+                  const definition = NEED_DEFINITIONS[termKey] || '';
+                  const isLastItem = idx === pairs.length - 1;
 
                   return (
                     <motion.button
                       key={idx}
                       type="button"
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => handleSelectDuality(idx)}
-                      className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-2.5 transition-all duration-200 cursor-pointer text-center relative border backdrop-blur-xl ${
+                      className={`group p-4 rounded-2xl flex flex-col items-start justify-between text-left gap-3 transition-all duration-200 cursor-pointer relative border backdrop-blur-xl ${
+                        isLastItem ? 'sm:col-span-2 sm:max-w-md sm:mx-auto sm:w-full lg:col-span-1 lg:max-w-none lg:mx-0' : ''
+                      } ${
                         isSelected
-                          ? 'bg-neutral-900/90 border-amber-400 shadow-xl shadow-amber-950/60 ring-2 ring-amber-500/40'
+                          ? (needType === 'need'
+                              ? 'bg-neutral-900/95 border-amber-400 shadow-xl shadow-amber-950/60 ring-2 ring-amber-500/40'
+                              : 'bg-neutral-900/95 border-rose-500 shadow-xl shadow-rose-950/60 ring-2 ring-rose-500/40')
                           : 'bg-neutral-950/60 border-neutral-800/80 hover:bg-neutral-900/60 hover:border-neutral-700'
                       }`}
                     >
-                      <div className={`p-3 rounded-full ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-900 text-amber-400/90'}`}>
-                        <Icon className="w-6 h-6" />
+                      <div className="flex items-center gap-3 w-full">
+                        <div className={`p-2.5 rounded-xl shrink-0 transition-colors ${
+                          isSelected 
+                            ? (needType === 'need' ? 'bg-amber-500 text-neutral-950 shadow-md' : 'bg-rose-600 text-neutral-100 shadow-md')
+                            : (needType === 'need' ? 'bg-neutral-900 text-amber-400/90 group-hover:text-amber-300' : 'bg-neutral-900 text-rose-400/90 group-hover:text-rose-300')
+                        }`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-cinzel text-base font-bold capitalize text-neutral-100 tracking-wide block truncate">
+                            {label}
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-cinzel text-base font-semibold capitalize text-neutral-100 tracking-wide">
-                        {label}
-                      </span>
-                      {isSelected && (
-                        <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-amber-400 shadow shadow-amber-400 animate-ping" />
-                      )}
+
+                      <p className={`text-xs leading-relaxed font-sans transition-colors ${
+                        isSelected 
+                          ? (needType === 'need' ? 'text-amber-100/90' : 'text-rose-100/90')
+                          : 'text-neutral-400 group-hover:text-neutral-300'
+                      }`}>
+                        {definition}
+                      </p>
                     </motion.button>
                   );
                 })}
@@ -547,6 +567,12 @@ export function InputMatrix({ onComplete }: Props) {
             <span className="text-amber-400 font-bold underline decoration-amber-500/50">{agent}</span>
             <span>."</span>
           </div>
+          {NEED_DEFINITIONS[selectedTerm] && (
+            <div className="mt-2 text-xs font-mono text-amber-300/80 italic flex items-center justify-center gap-1.5 flex-wrap">
+              <span className="text-amber-400 font-semibold"> {needType === 'need' ? selectedPair.needLabel : selectedPair.painLabel}:</span>
+              <span>"{NEED_DEFINITIONS[selectedTerm]}"</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Buttons: Back & Descend */}

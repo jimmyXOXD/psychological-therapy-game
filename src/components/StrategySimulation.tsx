@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { Worldview, ChatMessage } from '../types';
 import { GameCanvas } from './GameCanvas';
 import { motion } from 'motion/react';
-import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb, Eye, EyeOff, Check, Copy } from 'lucide-react';
+import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb, Eye, EyeOff, Check, Copy, Compass } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { registerWin, logTelemetry } from '../firebase';
 
 interface Props {
   worldview: Worldview;
+  onMainMenu?: () => void;
 }
 
-export function StrategySimulation({ worldview }: Props) {
-  const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+export function StrategySimulation({ worldview, onMainMenu }: Props) {
+  const [sessionId, setSessionId] = useState(() => Math.random().toString(36).substring(7));
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
@@ -249,9 +250,40 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
     setShowChat(false);
   };
 
+  const handleMainMenu = () => {
+    if (onMainMenu) {
+      onMainMenu();
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const handleRestartScenario = () => {
+    setSessionId(Math.random().toString(36).substring(7));
+    setIsGameOver(false);
+    setIsUnlocked(false);
+    setShowChat(false);
+    setIsChatMinimized(false);
+    setDebateAttempt(1);
+    setPromptsSentInAttempt(0);
+    setCollectedItems([false, false, false]);
+    setHasPresentedStoryForAttempt({});
+    setEvalSummary('');
+    setLatestHint(null);
+    setRequestedHints([]);
+    setIsCopied(false);
+    setMessages([{
+      role: 'model',
+      text: getInitialArgument(role, worldview)
+    }]);
+    setInputText('');
+    setIsTyping(false);
+  };
+
   return (
     <div className="w-full h-screen relative bg-black overflow-hidden font-mono text-orange-200 selection:bg-orange-900">
       <GameCanvas 
+        key={sessionId}
         worldview={worldview} 
         sessionId={sessionId}
         isUnlocked={isUnlocked}
@@ -270,12 +302,22 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
             <p className="text-neutral-400 text-sm leading-relaxed">
               You succumbed to the pressures of reality before you could dismantle the negative faith. The meaning of life remains unfulfilled.
             </p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="mt-4 px-6 py-3 bg-red-950 hover:bg-red-900 text-red-300 transition-colors border border-red-800 flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" /> Try Again
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full mt-4">
+              <button 
+                onClick={handleRestartScenario}
+                className="flex-1 px-5 py-3 bg-red-950 hover:bg-red-900 text-red-300 transition-colors border border-red-800 flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm font-mono font-bold"
+                title="Restart this scenario with the current worldview"
+              >
+                <RefreshCw className="w-4 h-4" /> Try Again
+              </button>
+              <button 
+                onClick={handleMainMenu}
+                className="flex-1 px-5 py-3 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors border border-neutral-700 hover:border-neutral-500 flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm font-mono"
+                title="Return to the Input Matrix to select a new faith"
+              >
+                <Compass className="w-4 h-4" /> Main Menu
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -418,7 +460,7 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
                 )}
               </button>
               <button 
-                onClick={() => window.location.reload()}
+                onClick={handleMainMenu}
                 className="flex-1 px-5 py-3 bg-green-950 hover:bg-green-900 text-green-300 transition-colors border border-green-800 hover:border-green-600 flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm"
               >
                 <RefreshCw className="w-4 h-4" /> Start New Simulation

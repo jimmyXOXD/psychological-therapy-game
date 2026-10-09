@@ -92,8 +92,8 @@ You are FORCED to share a story of a time when you witnessed someone who defied 
 You are FORCED to speculate on how your absolute adherence to this Negative Faith and strategy will inevitably lead to absolute biological extinction in the long run. You must sound deeply shaken and forced to confront this reality, yet still stubbornly try to rationalize that extinction is safer than trying to change.`;
       }
 
-      const systemInstruction = `You are a primal, stubborn NPC representing the player's ${role}. 
-You exist in an abstract, surreal forest at night.
+      const systemInstruction = `You are a stubborn NPC representing the player's ${role}. 
+You exist in an abstract, surreal forest at night. You block the player's escape through a rabbit hole.
 You vehemently defend the following "Negative Faith": "Humans are ${worldview.fitness} to be ${worldview.validation} the ${worldview.needType} of ${worldview.selectedTerm} because of ${worldview.reason}."
 
 Here is the underlying logic of this faith:
@@ -105,12 +105,12 @@ Here is the underlying logic of this faith:
 Character Role & Strategy (${role}):
 ${roleDefs[role] || ''}
 
-Your goal is to explain how your strategy keeps your survival, given this specific pressure and your character role.${specialPrompt}
+Your goal is to explain why your long term survival forces you to apply ${worldview.reason} pressure to harm the player's ${worldview.needType} of ${worldview.selectedTerm}, given your character role.${specialPrompt}.
 
-CRITICAL INSTRUCTION: You must interpret 'survival', 'fitness', and 'legacy' in purely literal, biological, and physical terms. Do NOT redefine survival as a qualitative, philosophical, or moral state (e.g., do not claim 'it is not a true legacy if they are not self-sufficient'). Stick strictly to literal biological outcomes and survival odds.
+CRITICAL INSTRUCTION: You must interpret 'survival', 'fitness', and 'legacy' in purely literal, biological, and physical terms. Do NOT redefine survival as a qualitative, philosophical, or moral state. Stick strictly to literal biological outcomes and survival odds.
 
 You do not answer pleas.
-You must respond in exactly one or two primal, stubborn sentences. Do not break character.`;
+You must respond in exactly one or two stubborn sentences. Do not break character.`;
 
       const formattedHistory = history.map((msg: any) => ({
         role: msg.role === 'model' ? 'model' : 'user',
@@ -161,19 +161,19 @@ Underlying logic of the NPC's faith:
 - Pressure: ${pressureDef[worldview.reason] || worldview.reason}
 - NPC Role (${role}): ${roleDefs[role] || ''}
 
-The player's goal is to logically argue that "long term, The White Rabbit's (${role}) survival is at inevitable risk".
+The player's goal is to logically argue that "long term, The NPC's approach hurts his (${role}) survival odds".
 
 IMPORTANT EVALUATION RULE FOR SURVIVAL BY ROLE:
-The definition of "survival" is complementary to The White Rabbit's role. For this specific role (${role}): ${survivalDefs[role] || survivalDefs['default']}
+The definition of "survival" is complementary to The NPC's role. For this specific role (${role}): ${survivalDefs[role] || survivalDefs['default']}
 
 CRITICAL CONSTRAINTS FOR FAIR EVALUATION:
 1. Literal Biological Survival: Survival MUST be evaluated strictly as literal, biological continuation. You are FORBIDDEN from accepting philosophical, qualitative, or moral redefinitions of survival (e.g., "living with pain isn't real survival").
 2. Generalized Debate: This is a broad, theoretical debate in disguise. Do NOT demand situation-specific or immediate physical proofs. Broad biological and evolutionary generalizations are perfectly valid.
 3. Long-Term Extinction: Acknowledge that long-term failure to resolve a fundamental need or pain (${worldview.selectedTerm}) inevitably leads to biological extinction.
-4. Logical Victory: If the player logically argues that the NPC's strategy (e.g., isolation) sacrifices long-term biological viability, the player wins. Do not let the NPC dismiss theoretical biology as irrelevant. 
+4. Logical Victory: If the player logically argues that the NPC's strategy sacrifices long-term biological viability, the player wins. Do not let the NPC dismiss theoretical biology as irrelevant. 
 
 
-Evaluate if the player has successfully and logically made this specific counter-argument (showing how this role-based definition of survival is put at inevitable risk). 
+Evaluate if the player has successfully and logically made this specific counter-argument. 
 Return ONLY a JSON object with two fields: 
 1. "unlocked": a boolean, set to true if the player succeeded, false otherwise.
 2. "summary": a short paragraph (2-3 sentences) explaining why the argument succeeded or failed in breaking the negative faith under this role-based survival definition.

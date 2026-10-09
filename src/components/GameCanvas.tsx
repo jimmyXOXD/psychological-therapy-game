@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, Sparkles } from 'lucide-react';
+import { Heart, Lightbulb } from 'lucide-react';
 import { Worldview } from '../types';
 import { logTelemetry } from '../firebase';
 
 interface Props {
+  key?: React.Key;
   worldview: Worldview;
   sessionId: string;
   isUnlocked: boolean;
@@ -737,7 +738,9 @@ export function GameCanvas({
       }
 
       // Spawn repeating attempt special items near player paths
-      if (debateAttempt === 2 && !collectedItems[0]) {
+      const curAttemptInit = debateAttempt;
+      const curCollectedInit = propsRef.current.collectedItems;
+      if (curAttemptInit === 2 && !curCollectedInit[0]) {
         state.entities.push({
           id: 'special_item_1',
           type: 'special_item_1',
@@ -747,7 +750,7 @@ export function GameCanvas({
           radius: 18
         });
         setHeroThought("Their words cut right to my soul... but I refuse to break. I must search the woods for a hint to expose their flawed conviction!");
-      } else if (debateAttempt === 3 && !collectedItems[1]) {
+      } else if (curAttemptInit === 3 && !curCollectedInit[1]) {
         state.entities.push({
           id: 'special_item_2',
           type: 'special_item_2',
@@ -757,7 +760,7 @@ export function GameCanvas({
           radius: 18
         });
         setHeroThought("The Primal Actor's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
-      } else if (debateAttempt === 4 && !collectedItems[2]) {
+      } else if (curAttemptInit === 4 && !curCollectedInit[2]) {
         state.entities.push({
           id: 'special_item_3',
           type: 'special_item_3',
@@ -766,7 +769,7 @@ export function GameCanvas({
           y: CENTER - 220,
           radius: 18
         });
-        setHeroThought("This is the final threshold. To challenge their ancient despair and end this cycle, I must recover onr more secret from the forest!.");
+        setHeroThought("This is the final threshold. To challenge their ancient despair and end this cycle, I must recover one more secret from the forest!");
       }
 
       // Spawning decorative trees (scary trees: tree1, tree2, tree8; lush oaks: tree3 to tree7)
@@ -884,6 +887,47 @@ export function GameCanvas({
 
     const update = (dt: number) => {
       if (state.dead || propsRef.current.isPaused) return;
+
+      // Dynamically ensure special item (artifact) is spawned if on repeat debate attempt
+      const currentAttempt = propsRef.current.debateAttempt;
+      const currentCollected = propsRef.current.collectedItems;
+      if (currentAttempt === 2 && !currentCollected[0]) {
+        if (!state.entities.some(e => e.id === 'special_item_1')) {
+          state.entities.push({
+            id: 'special_item_1',
+            type: 'special_item_1',
+            displayName: 'Shattered Mirror of the Past',
+            x: CENTER - 400,
+            y: CENTER - 580,
+            radius: 18
+          });
+          setHeroThought("Their words cut right to my soul... but I refuse to break. I must search the woods for a hint to expose their flawed conviction!");
+        }
+      } else if (currentAttempt === 3 && !currentCollected[1]) {
+        if (!state.entities.some(e => e.id === 'special_item_2')) {
+          state.entities.push({
+            id: 'special_item_2',
+            type: 'special_item_2',
+            displayName: 'Emblem of the Defiant',
+            x: CENTER - 280,
+            y: CENTER - 420,
+            radius: 18
+          });
+          setHeroThought("The Primal Actor's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
+        }
+      } else if (currentAttempt === 4 && !currentCollected[2]) {
+        if (!state.entities.some(e => e.id === 'special_item_3')) {
+          state.entities.push({
+            id: 'special_item_3',
+            type: 'special_item_3',
+            displayName: 'Extinction Ledger',
+            x: CENTER - 180,
+            y: CENTER - 220,
+            radius: 18
+          });
+          setHeroThought("This is the final threshold. To challenge their ancient despair and end this cycle, I must recover one more secret from the forest!");
+        }
+      }
 
       if (state.invincibilityTimer > 0) {
         state.invincibilityTimer -= dt;
@@ -1721,15 +1765,20 @@ export function GameCanvas({
               logTelemetry(sessionId, 'submission', { reason: 'primal_reached_before_tasks', interaction: 'proximity_reach' });
               setHeroThought("The White Rabbit's gaze is distant and cold. They won't let me pass for now.");
             }
-          } else if (dist(state.player, ent) > ent.radius + 80) {
+          } else if (dist(state.player, ent) > ent.radius + 60) {
             ent.hasLoggedSubmissionReach = false;
+            state.primalInteracted = false;
           }
 
-          // Auto-trigger The White Rabbit debate if close enough and tasks done
+          // Auto-trigger The White Rabbit debate if close enough and tasks done + required artifact collected
           if (state.tasksCompleted && !isUnlocked && dist(state.player, ent) < ent.radius + 20 && !state.primalInteracted) {
-            if (debateAttempt > 1 && !collectedItems[debateAttempt - 2]) {
+            const curAttempt = propsRef.current.debateAttempt;
+            const curCollected = propsRef.current.collectedItems;
+            const needsRelic = curAttempt > 1 && !curCollected[curAttempt - 2];
+
+            if (needsRelic) {
               const itemNames = ["Shattered Mirror of the Past", "Emblem of the Defiant", "Extinction Ledger"];
-              setHeroThought(`Their conviction is an impenetrable fortress... I cannot break through with words alone. I must find the ${itemNames[debateAttempt - 2]} in the woods!`);
+              setHeroThought(`Their conviction is an impenetrable fortress... I cannot break through with words alone. I must find the ${itemNames[curAttempt - 2]} in the woods!`);
               // Prevent getting stuck in a loop by shifting player target slightly away
               const shiftX = state.player.x > ent.x ? 25 : -25;
               const shiftY = state.player.y > ent.y ? 25 : -25;
@@ -3583,9 +3632,23 @@ export function GameCanvas({
       }
     };
 
+    let wasPaused = false;
+
     const loop = (time: number) => {
       const dt = (time - lastTime) / 1000;
       lastTime = time;
+
+      const isPaused = propsRef.current.isPaused;
+      if (wasPaused && !isPaused) {
+        state.primalInteracted = false;
+        const rabbit = state.entities.find(e => e.id === 'primal_actor');
+        if (rabbit && dist(state.player, rabbit) < rabbit.radius + 35) {
+          state.player.y = rabbit.y + rabbit.radius + 45;
+          state.player.targetX = state.player.x;
+          state.player.targetY = state.player.y;
+        }
+      }
+      wasPaused = isPaused;
       
       update(dt);
       
@@ -3645,7 +3708,15 @@ export function GameCanvas({
                setHeroThought("The White Rabbit's gaze is distant and cold. They won't let me pass for now.");
              }
           } else if (!isUnlocked) {
-             propsRef.current.onInteractPrimal();
+             const curAttempt = propsRef.current.debateAttempt;
+             const curCollected = propsRef.current.collectedItems;
+             const needsRelic = curAttempt > 1 && !curCollected[curAttempt - 2];
+             if (needsRelic) {
+               const itemNames = ["Shattered Mirror of the Past", "Emblem of the Defiant", "Extinction Ledger"];
+               setHeroThought(`Their conviction is an impenetrable fortress... I cannot break through with words alone. I must find the ${itemNames[curAttempt - 2]} in the woods!`);
+             } else {
+               propsRef.current.onInteractPrimal();
+             }
           }
         }
         
@@ -3732,7 +3803,7 @@ export function GameCanvas({
       cvs.removeEventListener('pointerenter', handlePointerMove);
       cvs.removeEventListener('pointerleave', handlePointerLeave);
     };
-  }, [worldview, isUnlocked, sessionId, debateAttempt, collectedItems]);
+  }, [worldview, isUnlocked, sessionId, debateAttempt]);
 
   return (
     <div className="relative w-full h-full select-none overflow-hidden">
@@ -3748,7 +3819,7 @@ export function GameCanvas({
       >
         <div className="relative max-w-xs sm:max-w-md bg-neutral-950/90 border border-amber-500/40 rounded-2xl p-4 shadow-[0_0_35px_rgba(0,0,0,0.85)] backdrop-blur-md text-center">
           <div className="flex items-center justify-center gap-1.5 text-[10px] uppercase font-mono tracking-widest text-amber-400 font-bold mb-1.5">
-            <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
+            <Lightbulb className="w-3 h-3 text-amber-400 animate-pulse" />
             <span>thoughts</span>
           </div>
           <p className="font-cinzel text-xs sm:text-sm text-neutral-100 leading-relaxed italic drop-shadow">

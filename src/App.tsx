@@ -16,7 +16,7 @@ export default function App() {
       {!worldview ? (
         <InputMatrix onComplete={setWorldview} />
       ) : (
-        <StrategySimulation worldview={worldview} />
+        <StrategySimulation worldview={worldview} onMainMenu={() => setWorldview(null)} />
       )}
     </div>
   );
