@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, Lightbulb } from 'lucide-react';
+import { Heart, Lightbulb, ShieldCheck } from 'lucide-react';
 import { Worldview } from '../types';
 import { logTelemetry } from '../firebase';
 
@@ -150,6 +150,7 @@ export function GameCanvas({
   const [heroThought, setHeroThought] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [hearts, setHearts] = useState(3);
+  const [inSafeZone, setInSafeZone] = useState(false);
   const setHudMsg = setHeroThought;
   
   const propsRef = useRef({ isPaused, onInteractPrimal, onGameOver, onCollectSpecialItem, debateAttempt, collectedItems });
@@ -483,7 +484,8 @@ export function GameCanvas({
       hasPointer: false,
       pointerScreenX: 0,
       pointerScreenY: 0,
-      isThinking: false
+      isThinking: false,
+      inSafeZone: false
     };
 
     const spawnEntities = () => {
@@ -501,9 +503,9 @@ export function GameCanvas({
       } else if (worldview.reason === 'High Social') {
         for(let i=0; i<25; i++) {
           const a = Math.random() * Math.PI * 2;
-          const r = getClearedInnerRadius();
+          const r = 150 + Math.random() * (INNER_RADIUS - 250);
           const ta = Math.random() * Math.PI * 2;
-          const tr = getClearedInnerRadius();
+          const tr = 150 + Math.random() * (INNER_RADIUS - 250);
           state.entities.push({ type: 'hazard_npc_rand', x: CENTER + Math.cos(a)*r, y: CENTER + Math.sin(a)*r, targetX: CENTER + Math.cos(ta)*tr, targetY: CENTER + Math.sin(ta)*tr, speed: 60, radius: 15 });
         }
       } else if (worldview.reason === 'Low Social') {
@@ -528,7 +530,7 @@ export function GameCanvas({
           state.taskMax = 5;
           for(let i=0; i<5; i++) {
             const p = getRandomPos();
-            state.entities.push({ id: `coin_${i}`, type: 'task_coin', x: p.x, y: p.y, radius: 10 });
+            state.entities.push({ id: `coin_${i}`, type: 'task_coin', x: p.x, y: p.y, radius: 22 });
           }
           setHeroThought("Can a weary mind ever find peace in this place? I must gather the 5 daisies to quiet my thoughts...");
         } else {
@@ -759,7 +761,7 @@ export function GameCanvas({
           y: CENTER - 420,
           radius: 18
         });
-        setHeroThought("The Primal Actor's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
+        setHeroThought("The white rabbit's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
       } else if (curAttemptInit === 4 && !curCollectedInit[2]) {
         state.entities.push({
           id: 'special_item_3',
@@ -913,7 +915,7 @@ export function GameCanvas({
             y: CENTER - 420,
             radius: 18
           });
-          setHeroThought("The Primal Actor's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
+          setHeroThought("The white rabbit's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
         }
       } else if (currentAttempt === 4 && !currentCollected[2]) {
         if (!state.entities.some(e => e.id === 'special_item_3')) {
@@ -965,8 +967,13 @@ export function GameCanvas({
         state.idleTimer = 0; // log once per 30s
       }
 
-      // Check outskirts (avoidance)
+      // Check outskirts (avoidance) and Safe Zone detection
       const distFromCenterPlayer = Math.hypot(state.player.x - CENTER, state.player.y - CENTER);
+      const isPlayerInSafeZone = distFromCenterPlayer >= INNER_RADIUS;
+      if (isPlayerInSafeZone !== state.inSafeZone) {
+        state.inSafeZone = isPlayerInSafeZone;
+        setInSafeZone(isPlayerInSafeZone);
+      }
       if (!state.outskirtsLogged && distFromCenterPlayer > INNER_RADIUS) {
         logTelemetry(sessionId, 'avoidance', { reason: 'reached_outskirts', x: state.player.x, y: state.player.y });
         state.outskirtsLogged = true;
@@ -1039,8 +1046,8 @@ export function GameCanvas({
         state.player.y = CENTER + Math.sin(angle) * OUTSKIRTS_RADIUS;
       }
 
-      // Spooky Eyes Update
-      if (Math.random() < 0.005) {
+      // Spooky Eyes Update (only inside danger trial grounds, never in safe outskirts)
+      if (distNew < INNER_RADIUS && Math.random() < 0.005) {
          const isLeft = Math.random() > 0.5;
          // Assume typical screen width ~1200, so edge is roughly +/- 600 from player
          const offsetX = (isLeft ? -(550 + Math.random()*200) : (550 + Math.random()*200)) / CAMERA_ZOOM;
@@ -1125,11 +1132,14 @@ export function GameCanvas({
           ent.y += ent.vy * dt;
 
           const hDist = Math.hypot(ent.x - CENTER, ent.y - CENTER);
-          if (hDist > OUTSKIRTS_RADIUS) {
+          if (hDist > INNER_RADIUS) {
             const angle = Math.atan2(ent.y - CENTER, ent.x - CENTER);
-            ent.x = CENTER + Math.cos(angle) * (OUTSKIRTS_RADIUS - 1);
-            ent.y = CENTER + Math.sin(angle) * (OUTSKIRTS_RADIUS - 1);
-            ent.timeToChange = 0;
+            ent.x = CENTER + Math.cos(angle) * (INNER_RADIUS - 2);
+            ent.y = CENTER + Math.sin(angle) * (INNER_RADIUS - 2);
+            const inwardAngle = angle + Math.PI + (Math.random() - 0.5) * (Math.PI * 0.5);
+            ent.vx = Math.cos(inwardAngle) * ent.speed;
+            ent.vy = Math.sin(inwardAngle) * ent.speed;
+            ent.timeToChange = -Math.log(Math.random()) * 2;
           }
           if (dist(state.player, ent) < ent.radius + 10) tryTakeDamage(true);
         }
@@ -1165,7 +1175,7 @@ export function GameCanvas({
         // Collection/Subjugation of caterpillars
         if (ent.type === 'caterpillar') {
           if (dist(state.player, ent) < ent.radius + 15) {
-            if (!state.hasCat) {
+            if (!state.hasCat && !state.hasCaterpillar) {
               state.hasCaterpillar = true;
               state.entities.splice(i, 1);
               setHeroThought("Caught you! I could sacrifice this caterpillar to protect myself.");
@@ -1369,7 +1379,7 @@ export function GameCanvas({
 
           // Enforce circular boundary for other entities
           const entDistCenter = Math.hypot(ent.x - CENTER, ent.y - CENTER);
-          const maxRadius = (ent.type === 'task_running_friend' || ent.type === 'task_hidden_friend') ? INNER_RADIUS : OUTSKIRTS_RADIUS;
+          const maxRadius = (ent.type === 'task_running_friend' || ent.type === 'task_hidden_friend' || ent.type === 'hazard_npc_rand') ? INNER_RADIUS : OUTSKIRTS_RADIUS;
           if (ent.type !== 'task_running_friend' && entDistCenter > maxRadius) {
             const angle = Math.atan2(ent.y - CENTER, ent.x - CENTER);
             ent.x = CENTER + Math.cos(angle) * maxRadius;
@@ -1396,6 +1406,20 @@ export function GameCanvas({
                 state.hasCat = true;
                 state.hasCaterpillar = false; // catching the cat friend removes caterpillar and its immunity
               } else if (ent.type === 'task_coin') {
+                for (let p = 0; p < 8; p++) {
+                  const pAngle = Math.random() * Math.PI * 2;
+                  const pSpeed = 25 + Math.random() * 45;
+                  state.particles.push({
+                    x: ent.x,
+                    y: ent.y - 12,
+                    vx: Math.cos(pAngle) * pSpeed,
+                    vy: Math.sin(pAngle) * pSpeed - 20,
+                    life: 0.45,
+                    maxLife: 0.45,
+                    radius: 3.5,
+                    color: '#fde047'
+                  });
+                }
                 if (state.taskProgress < state.taskMax) {
                   setHeroThought(`A glimmer of peace... (${state.taskProgress}/${state.taskMax}) daisies collected. Keep searching!`);
                 }
@@ -2381,35 +2405,72 @@ export function GameCanvas({
           ctx.shadowBlur = 0;
         }
       } else if (ent.type === 'task_coin') {
-        // Yellow Flower (28x43 Flower 9 - YELLOW.png)
-        const sway = Math.sin(time * 0.004 + ent.x) * 2;
+        // Enchanted Peace Daisy (Enlarged prominent collectible)
+        const sway = Math.sin(time * 0.004 + ent.x) * 3;
 
-        // Stem
-        ctx.strokeStyle = '#1e4d2b';
-        ctx.lineWidth = 2;
+        // Radiant golden aura pulse
+        const pulse = Math.sin(time * 0.005 + ent.x * 0.1) * 0.15 + 1;
+        const aura = ctx.createRadialGradient(sway * 1.2, -18, 3, sway * 1.2, -18, 30 * pulse);
+        aura.addColorStop(0, 'rgba(254, 240, 138, 0.6)');
+        aura.addColorStop(0.5, 'rgba(250, 204, 21, 0.28)');
+        aura.addColorStop(1, 'rgba(234, 179, 8, 0)');
+        ctx.fillStyle = aura;
         ctx.beginPath();
-        ctx.moveTo(0, 10);
-        ctx.quadraticCurveTo(sway/2, 0, sway, -10);
+        ctx.arc(sway * 1.2, -18, 30 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Thick curved stem
+        ctx.strokeStyle = '#1e5229';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 16);
+        ctx.quadraticCurveTo(sway * 0.5, 0, sway * 1.2, -18);
         ctx.stroke();
 
-        // Yellow Dandelion petals
-        ctx.fillStyle = '#ffd11a'; // bright yellow
-        ctx.save();
-        ctx.translate(sway, -10);
+        // Stem leaves
+        ctx.fillStyle = '#2f855a';
+        ctx.beginPath();
+        ctx.ellipse(sway * 0.4 - 7, 2, 9, 3.5, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(sway * 0.7 + 7, -6, 8, 3.5, 0.4, 0, Math.PI * 2);
+        ctx.fill();
 
-        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        // Blossom
+        ctx.save();
+        ctx.translate(sway * 1.2, -18);
+
+        // Outer petals layer (vibrant warm yellow)
+        ctx.fillStyle = '#facc15';
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
           ctx.save();
           ctx.rotate(a);
           ctx.beginPath();
-          ctx.ellipse(8, 0, 5, 2, 0, 0, Math.PI*2);
+          ctx.ellipse(15, 0, 10, 4, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
 
-        // Orange center
-        ctx.fillStyle = '#ff7a00';
+        // Inner petals layer (bright pale lemon)
+        ctx.fillStyle = '#fef08a';
+        for (let a = Math.PI / 16; a < Math.PI * 2; a += Math.PI / 8) {
+          ctx.save();
+          ctx.rotate(a);
+          ctx.beginPath();
+          ctx.ellipse(12, 0, 7.5, 3.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Center pollen disc (warm orange with amber highlight)
+        ctx.fillStyle = '#ea580c';
         ctx.beginPath();
-        ctx.arc(0, 0, 4, 0, Math.PI*2);
+        ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(-2.2, -2.2, 3.5, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -3297,12 +3358,19 @@ export function GameCanvas({
         ctx.restore();
       });
 
-      // Draw Outskirts / Circular Boundary
-      ctx.strokeStyle = '#112211';
-      ctx.lineWidth = 4;
+      // Draw Outskirts / Safe Zone Circular Boundary
+      ctx.save();
+      ctx.strokeStyle = 'rgba(52, 211, 153, 0.45)';
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([14, 10]);
+      ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
+      ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.arc(CENTER, CENTER, INNER_RADIUS, 0, Math.PI * 2); // Outskirts line
+      ctx.arc(CENTER, CENTER, INNER_RADIUS, 0, Math.PI * 2); // Demarcation ring for Safe Zone
       ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
+      ctx.restore();
 
       ctx.strokeStyle = '#220a0a';
       ctx.lineWidth = 10;
@@ -3510,8 +3578,9 @@ export function GameCanvas({
       // const fillH = height / CAMERA_ZOOM + 100;
       // ctx.fillRect(state.player.x - fillW / 2, state.player.y - fillH / 2, fillW, fillH);
 
-      // second version - lightning with transition from orange to black.
-      // Lighting — warm torch glow fading into cool, spooky darkness
+      // Lighting: Danger Zone (warm torch glow in deep oppressive darkness) vs Safe Zone (serene emerald-gold dawn ambiance)
+      const pDistCenter = Math.hypot(state.player.x - CENTER, state.player.y - CENTER);
+      const safeFactor = Math.min(1, Math.max(0, (pDistCenter - INNER_RADIUS) / 110));
 
       const grad = ctx.createRadialGradient(
           state.player.x,
@@ -3519,18 +3588,27 @@ export function GameCanvas({
           20 / CAMERA_ZOOM,
           state.player.x,
           state.player.y,
-          500 / CAMERA_ZOOM
+          (500 + safeFactor * 450) / CAMERA_ZOOM
       );
 
-      grad.addColorStop(0.00, 'rgba(255, 145, 45, 0.30)');   // warm orange core
-      grad.addColorStop(0.12, 'rgba(255, 170, 70, 0.27)');
-      grad.addColorStop(0.25, 'rgba(255, 195, 105, 0.23)');
-      grad.addColorStop(0.40, 'rgba(255, 210, 145, 0.18)');
-      grad.addColorStop(0.55, 'rgba(200, 150, 100, 0.10)');  // darken RGB values
-      grad.addColorStop(0.68, 'rgba(100, 60, 40, 0.05)');    // almost black, low alpha
-      grad.addColorStop(0.80, 'rgba(0, 0, 0, 0.20)');        // pure black, alpha begins to rise
-      grad.addColorStop(0.90, 'rgba(0, 0, 0, 0.60)');
-      grad.addColorStop(1.00, 'rgba(0, 0, 0, 0.90)');
+      // Core illumination transitions from torch orange to soft serene warm daylight
+      const rCore = Math.round(255 * (1 - safeFactor * 0.2) + 210 * (safeFactor * 0.2));
+      const gCore = Math.round(145 * (1 - safeFactor) + 235 * safeFactor);
+      const bCore = Math.round(45 * (1 - safeFactor) + 160 * safeFactor);
+      grad.addColorStop(0.00, `rgba(${rCore}, ${gCore}, ${bCore}, ${0.30 - safeFactor * 0.16})`);
+      grad.addColorStop(0.12, `rgba(255, 170, 70, ${0.27 * (1 - safeFactor * 0.5)})`);
+      grad.addColorStop(0.25, `rgba(255, 195, 105, ${0.23 * (1 - safeFactor * 0.6)})`);
+      grad.addColorStop(0.40, `rgba(255, 210, 145, ${0.18 * (1 - safeFactor * 0.7)})`);
+      grad.addColorStop(0.55, `rgba(200, 150, 100, ${0.10 * (1 - safeFactor * 0.8)})`);
+      grad.addColorStop(0.68, `rgba(100, 60, 40, ${0.05 * (1 - safeFactor * 0.85)})`);
+      
+      // Darkness outer stops: deep black in danger zone, almost fully dissolved in safe zone
+      const outerDarkAlpha1 = 0.90 * (1 - safeFactor * 0.88);
+      const outerDarkAlpha2 = 0.60 * (1 - safeFactor * 0.88);
+      const outerDarkAlpha3 = 0.20 * (1 - safeFactor * 0.88);
+      grad.addColorStop(0.80, `rgba(0, 0, 0, ${outerDarkAlpha3})`);
+      grad.addColorStop(0.90, `rgba(0, 0, 0, ${outerDarkAlpha2})`);
+      grad.addColorStop(1.00, `rgba(0, 0, 0, ${outerDarkAlpha1})`);
 
       ctx.fillStyle = grad;
 
@@ -3544,46 +3622,90 @@ export function GameCanvas({
           fillH
       );
 
-      // Draw Spooky Eyes
-      state.spookyEyes.forEach(eye => {
-          let alpha = 1;
-          if (eye.life > eye.maxLife - 0.5) alpha = (eye.maxLife - eye.life) / 0.5;
-          else if (eye.life < 0.5) alpha = eye.life / 0.5;
-          if (alpha < 0) alpha = 0;
-          
-          ctx.fillStyle = `rgba(255, 50, 50, ${alpha * 0.8})`;
-          ctx.shadowColor = `rgba(255, 50, 50, ${alpha})`;
-          ctx.shadowBlur = 15 / CAMERA_ZOOM;
-          
-          ctx.beginPath();
-          ctx.ellipse(eye.x - 8 / CAMERA_ZOOM, eye.y, 2 / CAMERA_ZOOM, 5 / CAMERA_ZOOM, 0, 0, Math.PI*2);
-          ctx.fill();
-          
-          ctx.beginPath();
-          ctx.ellipse(eye.x + 8 / CAMERA_ZOOM, eye.y, 2 / CAMERA_ZOOM, 5 / CAMERA_ZOOM, 0, 0, Math.PI*2);
-          ctx.fill();
-          
-          ctx.shadowBlur = 0;
-      });
+      // In safe zone: wash world in serene, warm emerald-tinted twilight bloom
+      if (safeFactor > 0.02) {
+        ctx.fillStyle = `rgba(16, 75, 45, ${0.13 * safeFactor})`;
+        ctx.fillRect(
+            state.player.x - fillW / 2,
+            state.player.y - fillH / 2,
+            fillW,
+            fillH
+        );
+        const dawnBloom = ctx.createRadialGradient(
+            state.player.x,
+            state.player.y,
+            30 / CAMERA_ZOOM,
+            state.player.x,
+            state.player.y,
+            750 / CAMERA_ZOOM
+        );
+        dawnBloom.addColorStop(0.0, `rgba(254, 240, 138, ${0.16 * safeFactor})`);
+        dawnBloom.addColorStop(0.45, `rgba(167, 243, 208, ${0.11 * safeFactor})`);
+        dawnBloom.addColorStop(1.0, 'rgba(16, 185, 129, 0)');
+        ctx.fillStyle = dawnBloom;
+        ctx.fillRect(
+            state.player.x - fillW / 2,
+            state.player.y - fillH / 2,
+            fillW,
+            fillH
+        );
+      }
+
+      // Draw Spooky Eyes (strictly in danger trial grounds, suppressed in safe zone)
+      if (safeFactor < 0.2) {
+        state.spookyEyes.forEach(eye => {
+            let alpha = 1 - safeFactor * 5;
+            if (eye.life > eye.maxLife - 0.5) alpha *= (eye.maxLife - eye.life) / 0.5;
+            else if (eye.life < 0.5) alpha *= eye.life / 0.5;
+            if (alpha <= 0) return;
+            
+            ctx.fillStyle = `rgba(255, 50, 50, ${alpha * 0.8})`;
+            ctx.shadowColor = `rgba(255, 50, 50, ${alpha})`;
+            ctx.shadowBlur = 15 / CAMERA_ZOOM;
+            
+            ctx.beginPath();
+            ctx.ellipse(eye.x - 8 / CAMERA_ZOOM, eye.y, 2 / CAMERA_ZOOM, 5 / CAMERA_ZOOM, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.ellipse(eye.x + 8 / CAMERA_ZOOM, eye.y, 2 / CAMERA_ZOOM, 5 / CAMERA_ZOOM, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+        });
+      }
 
       ctx.restore();
 
       // Screen space target indicator arrow
-      const target = state.entities.find(e => 
+      const eligibleTargets = state.entities.filter(e => 
         e.type === 'task_running_friend' || 
         e.type === 'task_push_bird' || 
         e.type === 'task_push_cat' || 
         e.type === 'task_infected_flora' || 
         e.type === 'task_fight' ||
+        e.type === 'task_coin' ||
         (e.type === 'task_caged_bird' && !e.isReleased)
       );
+
+      // Find nearest eligible target to the player
+      let target: any = null;
+      let minTargetDist = Infinity;
+      for (const t of eligibleTargets) {
+        const d = Math.hypot(t.x - state.player.x, t.y - state.player.y);
+        if (d < minTargetDist) {
+          minTargetDist = d;
+          target = t;
+        }
+      }
+
       if (target) {
          const dx = target.x - state.player.x;
          const dy = target.y - state.player.y;
          const worldDist = Math.hypot(dx, dy);
          
-         // If target is off-screen (world distance > 220 units)
-         if (worldDist > 220) {
+         // If target is off-screen (world distance > 200 units)
+         if (worldDist > 200) {
             const angle = Math.atan2(dy, dx);
             const cx = width / 2;
             const cy = height / 2;
@@ -3595,14 +3717,16 @@ export function GameCanvas({
             
             const isFlora = target.type === 'task_infected_flora' || target.type === 'task_fight';
             const isBird = target.type === 'task_caged_bird' || target.type === 'task_push_bird' || target.type === 'task_push_cat';
+            const isDaisy = target.type === 'task_coin';
+
             ctx.save();
             ctx.translate(arrowX, arrowY);
             ctx.rotate(angle);
             
             ctx.shadowBlur = 15;
-            ctx.shadowColor = isBird ? '#38bdf8' : (isFlora ? '#a855f7' : '#d946ef');
-            ctx.fillStyle = isBird ? '#7dd3fc' : (isFlora ? '#c084fc' : '#f472b6'); 
-            ctx.strokeStyle = isBird ? '#0284c7' : (isFlora ? '#7e22ce' : '#db2777');
+            ctx.shadowColor = isDaisy ? '#eab308' : (isBird ? '#38bdf8' : (isFlora ? '#a855f7' : '#d946ef'));
+            ctx.fillStyle = isDaisy ? '#fde047' : (isBird ? '#7dd3fc' : (isFlora ? '#c084fc' : '#f472b6')); 
+            ctx.strokeStyle = isDaisy ? '#ca8a04' : (isBird ? '#0284c7' : (isFlora ? '#7e22ce' : '#db2777'));
             ctx.lineWidth = 2.5;
             
             ctx.beginPath();
@@ -3617,18 +3741,55 @@ export function GameCanvas({
             // Draw distance label rotated upright
             ctx.rotate(-angle);
             ctx.shadowBlur = 0;
-            ctx.fillStyle = isBird ? '#bae6fd' : (isFlora ? '#e9d5ff' : '#fbcfe8');
+            ctx.fillStyle = isDaisy ? '#fef08a' : (isBird ? '#bae6fd' : (isFlora ? '#e9d5ff' : '#fbcfe8'));
             ctx.font = 'bold 11px monospace';
             ctx.textAlign = 'center';
-            const labelName = (target.type === 'task_push_cat' || target.type === 'task_push_bird')
-              ? 'BIRD' 
-              : (target.type === 'task_running_friend' 
-                ? 'FRIEND' 
-                : (isBird ? 'BIRD' : 'FLORA'));
+            const labelName = isDaisy
+              ? 'DAISY'
+              : ((target.type === 'task_push_cat' || target.type === 'task_push_bird')
+                ? 'BIRD' 
+                : (target.type === 'task_running_friend' 
+                  ? 'FRIEND' 
+                  : (isBird ? 'BIRD' : 'FLORA')));
             ctx.fillText(`${labelName}: ${Math.round(worldDist)}m`, 0, 24);
             
             ctx.restore();
          }
+      }
+
+      // On-screen text notification for Safe Zone in canvas screen space
+      const playerDistCenter = Math.hypot(state.player.x - CENTER, state.player.y - CENTER);
+      const safeRatio = Math.min(1, Math.max(0, (playerDistCenter - INNER_RADIUS) / 100));
+      if (safeRatio > 0.05) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        
+        const bannerW = Math.min(480, width - 36);
+        const bannerH = 42;
+        const bannerX = width / 2;
+        const bannerY = height - 38;
+
+        ctx.fillStyle = `rgba(6, 44, 28, ${0.85 * safeRatio})`;
+        ctx.strokeStyle = `rgba(52, 211, 153, ${0.75 * safeRatio})`;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(16, 185, 129, 0.45)';
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        ctx.roundRect(bannerX - bannerW / 2, bannerY - bannerH / 2, bannerW, bannerH, 21);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = `rgba(167, 243, 208, ${safeRatio})`;
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText('✦ SAFE ZONE — OUTSKIRTS ✦', bannerX, bannerY - 4);
+
+        ctx.fillStyle = `rgba(209, 250, 229, ${safeRatio * 0.92})`;
+        ctx.font = '10px monospace';
+        ctx.fillText('No hazards here. Nothing to interact with — return inward.', bannerX, bannerY + 11);
+
+        ctx.restore();
       }
     };
 
@@ -3830,6 +3991,27 @@ export function GameCanvas({
         <div className="flex flex-col items-center gap-1 mt-1">
           <div className="w-2.5 h-2.5 rounded-full bg-neutral-950/90 border border-amber-500/40 shadow-sm" />
           <div className="w-1.5 h-1.5 rounded-full bg-neutral-950/90 border border-amber-500/40 shadow-sm" />
+        </div>
+      </div>
+
+      {/* Safe Zone Banner */}
+      <div 
+        className={`absolute top-5 left-1/2 -translate-x-1/2 pointer-events-none z-30 transition-all duration-500 ease-out flex flex-col items-center ${
+          inSafeZone 
+            ? 'opacity-100 translate-y-0 scale-100' 
+            : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="px-5 py-2.5 rounded-full bg-neutral-950/90 border border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.35)] backdrop-blur-md flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 animate-pulse" />
+          <div className="flex flex-col text-center">
+            <span className="font-cinzel text-xs sm:text-sm font-bold text-emerald-300 tracking-widest uppercase">
+              Safe Zone — Outskirts
+            </span>
+            <span className="text-[11px] sm:text-xs font-mono text-emerald-200/90 font-medium tracking-wide">
+              Safe from all hazards. Nothing to interact with here — return inward to continue.
+            </span>
+          </div>
         </div>
       </div>
 
