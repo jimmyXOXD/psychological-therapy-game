@@ -35,9 +35,13 @@ export function StrategySimulation({ worldview, onMainMenu }: Props) {
   const getInitialArgument = (agentRole: string, wv: Worldview) => {
     const localizedRole = t(`simulation.agentRole.${agentRole}`);
 
+    const localizedTerm = wv.needType === 'need'
+      ? (t(`matrix.needLabel.${wv.selectedTerm}`) || wv.selectedTerm)
+      : (t(`matrix.painLabel.${wv.selectedTerm}`) || wv.selectedTerm);
+
     const needGoal = wv.needType === 'need'
-      ? t('simulation.needGoal.need', { term: wv.selectedTerm })
-      : t('simulation.needGoal.pain', { term: wv.selectedTerm });
+      ? t('simulation.needGoal.need', { term: localizedTerm })
+      : t('simulation.needGoal.pain', { term: localizedTerm });
 
     const coreBelief = wv.fitness === 'unallowed'
       ? t('simulation.coreBelief.unallowed', { needGoal })

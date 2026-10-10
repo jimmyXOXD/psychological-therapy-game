@@ -90,10 +90,10 @@ async function startServer() {
       let specialPrompt = '';
       if (specialItemStoryType === 'traumatic') {
         specialPrompt = `\n\nCRITICAL SPECIAL EVENT: The player has presented the "Shattered Mirror of the Past". 
-You are FORCED to share a short, intense, traumatic past story from your background when you or someone else tried to satisfy the need for "${worldview.selectedTerm}" but suffered an absolute catastrophe because of the constraint "${worldview.reason}". This trauma is what permanently sealed your stubborn negative faith. Describe this short story in ${targetLang.label} and stubbornly defend why it proves your strategy is correct.`;
+You are FORCED to share a short, intense, traumatic past story from your background when you or someone else tried to satisfy the need for "${worldview.selectedTerm}" but suffered an absolute catastrophe because of the constraint "${worldview.reason}" applied by their ${roleDefs[role]}. This trauma is what permanently sealed your stubborn negative faith. Describe this short story in ${targetLang.label} and stubbornly defend why it proves your strategy is correct.`;
       } else if (specialItemStoryType === 'success') {
         specialPrompt = `\n\nCRITICAL SPECIAL EVENT: The player has presented the "Emblem of the Defiant".
-You are FORCED to share a story of a time when you witnessed someone who defied your strategy, did not follow the faith, and actually succeeded in gaining "${worldview.selectedTerm}" despite the pressure of "${worldview.reason}". You must stubbornly dismiss this success as a dangerous, temporary fluke in ${targetLang.label}, asserting that their doom is still coming.`;
+You are FORCED to share a story of a time when you witnessed someone who defied your strategy, did not follow the faith, and actually succeeded in gaining "${worldview.selectedTerm}" despite the pressure of "${worldview.reason}" applied by their ${roleDefs[role]}. You must stubbornly dismiss this success as a dangerous, temporary fluke in ${targetLang.label}, asserting that their doom is still coming.`;
       } else if (specialItemStoryType === 'extinction') {
         specialPrompt = `\n\nCRITICAL SPECIAL EVENT: The player has presented the "Extinction Ledger".
 You are FORCED to speculate on how your absolute adherence to this Negative Faith and strategy will inevitably lead to absolute biological extinction in the long run. You must sound deeply shaken and forced to confront this reality in ${targetLang.label}, yet still stubbornly try to rationalize that extinction is safer than trying to change.`;
@@ -102,7 +102,7 @@ You are FORCED to speculate on how your absolute adherence to this Negative Fait
       const systemInstruction = `
 You are a stubborn NPC representing the player's ${role}. 
 You exist in an abstract, surreal forest at night. You block the player's escape through a rabbit hole.
-You vehemently defend the following "Negative Faith": "Humans are ${worldview.fitness} to be ${worldview.validation} the ${worldview.needType} of ${worldview.selectedTerm} because of ${worldview.reason}."
+You vehemently defend the following "Negative Faith": "Humans are ${worldview.fitness} to be ${worldview.validation} the ${worldview.needType} of ${worldview.selectedTerm} because of ${worldview.reason} pressure applied by their ${roleDefs[role]}."
 
 Here is the underlying logic of this faith:
 - Fitness ("${worldview.fitness}"): ${fitnessDef}.
@@ -163,9 +163,9 @@ Respond in ${targetLang.label}.`;
       const { role, fitnessDef, validationDef } = buildContext(worldview);
       
       const prompt = `
-Analyze the following chat log between a player and an NPC. 
+Analyze the following chat log between a player and an NPC called "The white rabbit". 
 The NPC represents the player's ${role} and is defending a "Negative Faith":
-"Humans are ${worldview.fitness} to be ${worldview.validation} the ${worldview.needType} of ${worldview.selectedTerm} because of ${worldview.reason}."
+"Humans are ${worldview.fitness} to be ${worldview.validation} the ${worldview.needType} of ${worldview.selectedTerm} because of ${worldview.reason} pressure applied by their ${roleDefs[role]}."
 
 Underlying logic of the NPC's faith:
 - Fitness: ${fitnessDef}
@@ -189,7 +189,7 @@ CRITICAL CONSTRAINTS FOR FAIR EVALUATION:
 Evaluate if the player has successfully and logically made this specific counter-argument. 
 Return ONLY a JSON object with two fields: 
 1. "unlocked": a boolean, set to true if the player succeeded, false otherwise.
-2. "summary": a short paragraph (2-3 sentences) in ${targetLang.label} explaining why the argument succeeded or failed in breaking the negative faith under this role-based survival definition.
+2. "summary": a short paragraph (2-3 sentences) in ${targetLang.label} explaining why the argument succeeded or failed.
 
 Chat Log:
 ${JSON.stringify(chatLog)}
