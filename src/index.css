@@ -7,6 +7,31 @@
   }
 }
 
+/* Hebrew typography override: display all text in Calibri font when Hebrew is active */
+html[lang="he"],
+html[lang="he"] body,
+html.lang-he,
+html.lang-he body,
+body.lang-he,
+html[lang="he"] *,
+html[lang="he"] *::before,
+html[lang="he"] *::after,
+html.lang-he *,
+html.lang-he *::before,
+html.lang-he *::after,
+[dir="rtl"],
+[dir="rtl"] * {
+  font-family: 'Calibri', 'Carlito', 'Segoe UI', 'Arial Hebrew', Arial, sans-serif !important;
+}
+
+/* Normalize letter spacing in Hebrew for natural glyph connection and legibility */
+html[lang="he"] .tracking-widest,
+html[lang="he"] .tracking-wider,
+[dir="rtl"] .tracking-widest,
+[dir="rtl"] .tracking-wider {
+  letter-spacing: normal !important;
+}
+
 .font-cinzel {
   font-family: 'Cinzel', serif;
 }

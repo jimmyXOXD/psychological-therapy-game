@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Heart, Lightbulb, ShieldCheck } from 'lucide-react';
 import { Worldview } from '../types';
 import { logTelemetry } from '../firebase';
+import { t } from '../locales/i18n';
 
 interface Props {
   key?: React.Key;
@@ -74,64 +75,7 @@ export const INFECTED_FLORA_PURGE_SECONDS = 5;
 export function getTaskEndingThought(worldview: Worldview): string {
   const need = worldview.fundamentalNeed;
   const type = worldview.needType;
-
-  if (need === 'peace') {
-    if (type === 'need') {
-      return "My mind feels calm and quiet at last... Now I can go to the rabbit hole at the center to escape!";
-    } else {
-      return "The illusion has stopped running away. The true rabbit hole is waiting right here at the center. Time to escape!";
-    }
-  }
-
-  if (need === 'wonder') {
-    if (type === 'need') {
-      return "Found it! The true key is shining in the earth - my wonder was rewarded after all! Now I can head to the rabbit hole at the center to escape.";
-    } else {
-      return "There you are, finally resting at the center! No more running away from disappointment... The rabbit hole is open right beside us. It is time to escape.";
-    }
-  }
-
-  if (need === 'support') {
-    if (type === 'need') {
-      return "I caught up to you! I don't have to carry this heavy burden alone anymore. Together, let's head to the rabbit hole at the center and escape!";
-    } else {
-      return "There you are! You are safe, and I am not trapped in solitude anymore. Come, let's make our way to the rabbit hole at the center and escape!";
-    }
-  }
-
-  if (need === 'certainty') {
-    if (type === 'need') {
-      return "The colors have aligned in perfect order! The mist of doubt has parted, and certainty is restored. Now I can proceed to the rabbit hole at the center to escape.";
-    } else {
-      return "The little bird is safely nestled in its home, warm and protected. Certainty returns to the forest... Now I can escape through the rabbit hole at the center.";
-    }
-  }
-
-  if (need === 'hope') {
-    if (type === 'need') {
-      return "The blighted flora are purged! Light and life are returning to the soil, and hope is restored. Now I can head to the rabbit hole at the center to escape.";
-    } else {
-      return "The blaze is extinguished... the smoke is clearing and the grove is saved from destruction. Now I can proceed to the rabbit hole at the center to escape.";
-    }
-  }
-
-  if (need === 'attention') {
-    if (type === 'need') {
-      return "I listened closely and honored the forest's sacred call! Harmony is restored to the woods. Now I can make my way to the rabbit hole at the center to escape.";
-    } else {
-      return "Every cage is unlocked! The air is filled with the joy of free wings, and confinement is broken. I am ready to head to the rabbit hole at the center to escape.";
-    }
-  }
-
-  if (need === 'privacy') {
-    if (type === 'need') {
-      return "The intrusions have been cleansed! The sacred forest's borders and sovereignty are restored. The path is clear—time to head to the rabbit hole at the center to escape.";
-    } else {
-      return "The creeping threats have been banished from the threshold! Our sanctuary is defended and peaceful once again. Now I can step into the rabbit hole at the center to escape.";
-    }
-  }
-
-  return "The conflict is resolved and the forest is at peace! I can now come to the rabbit hole at the center to escape.";
+  return t(`taskEnding.${need}_${type}`) || t('taskEnding.default');
 }
 
 export function GameCanvas({ 
@@ -532,7 +476,7 @@ export function GameCanvas({
             const p = getRandomPos();
             state.entities.push({ id: `coin_${i}`, type: 'task_coin', x: p.x, y: p.y, radius: 22 });
           }
-          setHeroThought("Can a weary mind ever find peace in this place? I must gather the 5 daisies to quiet my thoughts...");
+          setHeroThought(t('heroThought.initial_peace_need'));
         } else {
           state.taskMax = 3;
           state.entities.push({
@@ -546,7 +490,7 @@ export function GameCanvas({
             escapes: 0,
             isStable: false
           });
-          setHeroThought("Everything here feels so hollow and dull... I need to find the rabbit hole and escape this suffocating dissatisfaction before it drowns me.");
+          setHeroThought(t('heroThought.initial_peace_pain'));
         }
       } else if (need === 'wonder') {
         if (type === 'need') {
@@ -556,24 +500,24 @@ export function GameCanvas({
             const p = getRandomPos();
             state.entities.push({ id: `wonder_hole_${i}`, type: 'task_wonder_hole', x: p.x, y: p.y, radius: 25, hasKey: i === keyIndex });
           }
-          setHeroThought("So many mysterious burrows in the earth... which one holds the true key to escape? I must explore them all.");
+          setHeroThought(t('heroThought.initial_wonder_need'));
         } else {
           // Disappointment Task: Chasing the White Rabbit 4 times
           state.taskMax = 4;
           state.taskProgress = 0;
-          setHeroThought("I need to find the White Rabbit waiting at the center of the forest...");
+          setHeroThought(t('heroThought.initial_wonder_pain'));
         }
       } else if (need === 'support') {
         if (type === 'need') {
           state.taskMax = 1;
           state.entities.push({ id: 'friend', type: 'task_running_friend', x: CENTER - 600, y: CENTER - 600, speed: 120, radius: 15 });
-          setHeroThought("I can't carry this burden alone. I need someone by my side... Wait, there they are! Don't run from me, wait!");
+          setHeroThought(t('heroThought.initial_support_need'));
         } else {
           state.taskTimer = 60;
           state.taskMax = 1;
           const p = getRandomPos();
           state.entities.push({ id: 'hidden_friend', type: 'task_hidden_friend', x: p.x, y: p.y, radius: 15 });
-          setHeroThought("The silence is deafening. This crushing loneliness is eating away at my heart... Where are you hiding? Please, let me find you before time runs out!");
+          setHeroThought(t('heroThought.initial_support_pain'));
         }
       } else if (need === 'certainty') {
         if (type === 'need') {
@@ -592,7 +536,7 @@ export function GameCanvas({
              const colors = ['blue', 'purple', 'yellow'];
              state.entities.push({ id: `mushroom_${i}`, type: 'task_mushroom', x: p.x, y: p.y, radius: 15, color: colors[i % 3] });
           }
-          setHeroThought("So much uncertainty! I need to find the true glowing marking and follow its color order, but how can I know which path is real in this blinding mist?");
+          setHeroThought(t('heroThought.initial_certainty_need'));
         } else {
           // Pain of Uncertainty: Push the lost bird back to its nest near the center
           state.taskMax = 1;
@@ -615,7 +559,7 @@ export function GameCanvas({
             facing: 1,
             wingState: 'up'
           });
-          setHeroThought("That poor bird is stranded and shivering... Even in perpetual doubt, there has to be hope. I must guide it back to its nest near the center.");
+          setHeroThought(t('heroThought.initial_certainty_pain'));
         }
       } else if (need === 'hope') {
         if (type === 'need') {
@@ -633,7 +577,7 @@ export function GameCanvas({
               maxHp: INFECTED_FLORA_MAX_HP 
             });
           }
-          setHeroThought("I need to save the forest from the infection to restore hope! Hover the cursor over these 3 infected flora for 5 seconds to purge their blight.");
+          setHeroThought(t('heroThought.initial_hope_need'));
         } else {
           // Pain of Physical Pain: Spreading Forest Fire
           state.taskMax = 1;
@@ -656,7 +600,7 @@ export function GameCanvas({
               spreadTimer: 2.5 + Math.random() * 2.0
             });
           });
-          setHeroThought("The flames are spreading so fast! If I lose focus for even a second, the entire grove will burn to cinder. I must put out every fire!");
+          setHeroThought(t('heroThought.initial_hope_pain'));
         }
       } else if (need === 'attention') {
         if (type === 'need') {
@@ -670,7 +614,7 @@ export function GameCanvas({
              const colors = ['blue', 'purple', 'yellow'];
              state.entities.push({ id: `mushroom_${i}`, type: 'task_mushroom', x: p.x, y: p.y, radius: 15, color: colors[i % 3] });
           }
-          setHeroThought("I must pay attention to the forst's call... I need to inspect the sacred marking at the center and follow its colors.");
+          setHeroThought(t('heroThought.initial_attention_need'));
         } else {
           // Pain of Imprisonment: Free the caged birds
           state.taskMax = 5;
@@ -691,7 +635,7 @@ export function GameCanvas({
               facing: 1
             });
           }
-          setHeroThought("Helpless and confined, just like my own trapped thoughts... I must break the locks and set all 5 caged birds free from their imprisonment.");
+          setHeroThought(t('heroThought.initial_attention_pain'));
         }
       } else if (need === 'privacy') {
         if (type === 'need') {
@@ -708,7 +652,7 @@ export function GameCanvas({
               radius: 32
             });
           }
-          setHeroThought("Intrusions everywhere! The sacred forest is being violated. I must cleanse these 8 illness stains to reclaim the forest's sovereignty.");
+          setHeroThought(t('heroThought.initial_privacy_need'));
         } else {
           // Creeping Illness Defense (Pain of Change)
           state.taskMax = 10;
@@ -729,7 +673,7 @@ export function GameCanvas({
               radius: 28
             });
           }
-          setHeroThought("Those illness stains threaten to destroy the rabbit hole! I cannot let them cause such imbalance. I must banish all creeping threats!");
+          setHeroThought(t('heroThought.initial_privacy_pain'));
         }
       }
       
@@ -751,7 +695,7 @@ export function GameCanvas({
           y: CENTER - 580,
           radius: 18
         });
-        setHeroThought("Their words cut right to my soul... but I refuse to break. I must search the woods for a hint to expose their flawed conviction!");
+        setHeroThought(t('heroThought.relic_hint_attempt_2'));
       } else if (curAttemptInit === 3 && !curCollectedInit[1]) {
         state.entities.push({
           id: 'special_item_2',
@@ -761,7 +705,7 @@ export function GameCanvas({
           y: CENTER - 420,
           radius: 18
         });
-        setHeroThought("The white rabbit's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
+        setHeroThought(t('heroThought.relic_hint_attempt_3'));
       } else if (curAttemptInit === 4 && !curCollectedInit[2]) {
         state.entities.push({
           id: 'special_item_3',
@@ -771,7 +715,7 @@ export function GameCanvas({
           y: CENTER - 220,
           radius: 18
         });
-        setHeroThought("This is the final threshold. To challenge their ancient despair and end this cycle, I must recover one more secret from the forest!");
+        setHeroThought(t('heroThought.relic_hint_attempt_4'));
       }
 
       // Spawning decorative trees (scary trees: tree1, tree2, tree8; lush oaks: tree3 to tree7)
@@ -903,7 +847,7 @@ export function GameCanvas({
             y: CENTER - 580,
             radius: 18
           });
-          setHeroThought("Their words cut right to my soul... but I refuse to break. I must search the woods for a hint to expose their flawed conviction!");
+          setHeroThought(t('heroThought.relic_hint_attempt_2'));
         }
       } else if (currentAttempt === 3 && !currentCollected[1]) {
         if (!state.entities.some(e => e.id === 'special_item_2')) {
@@ -915,7 +859,7 @@ export function GameCanvas({
             y: CENTER - 420,
             radius: 18
           });
-          setHeroThought("The white rabbit's resolve is suffocating. I cannot falter now - I need to unearth find more clues hidden in the forest to steady my resolve!");
+          setHeroThought(t('heroThought.relic_hint_attempt_3'));
         }
       } else if (currentAttempt === 4 && !currentCollected[2]) {
         if (!state.entities.some(e => e.id === 'special_item_3')) {
@@ -927,7 +871,7 @@ export function GameCanvas({
             y: CENTER - 220,
             radius: 18
           });
-          setHeroThought("This is the final threshold. To challenge their ancient despair and end this cycle, I must recover one more secret from the forest!");
+          setHeroThought(t('heroThought.relic_hint_attempt_4'));
         }
       }
 
@@ -948,16 +892,16 @@ export function GameCanvas({
             radius: 36 + Math.random() * 16
           });
           logTelemetry(sessionId, 'subjugation', { reason: 'caterpillar_killed', x: state.player.x, y: state.player.y });
-          setHeroThought("Gah! The caterpillar absorbed the deadly strike for me... I have to be more careful!");
+          setHeroThought(t('heroThought.caterpillar_absorbed_hit'));
           return;
         }
         if (isInstantDeath) {
           state.hearts = 0;
-          setHeroThought("The darkness is too heavy... I let the despair win. But perhaps, with a fresh conviction, I can try again...");
+          setHeroThought(t('heroThought.death_instant'));
         } else {
           state.hearts = Math.max(0, state.hearts - 1);
           state.invincibilityTimer = 1.5;
-          setHeroThought("Ugh! The forest's perils are unforgiving... My body aches. I can't survive many more wounds like that.");
+          setHeroThought(t('heroThought.take_damage'));
         }
       };
 
@@ -1178,7 +1122,7 @@ export function GameCanvas({
             if (!state.hasCat && !state.hasCaterpillar) {
               state.hasCaterpillar = true;
               state.entities.splice(i, 1);
-              setHeroThought("Caught you! I could sacrifice this caterpillar to protect myself.");
+              setHeroThought(t('heroThought.caterpillar_caught'));
               continue;
             }
           }
@@ -1228,7 +1172,7 @@ export function GameCanvas({
             if (ent.scorchTimer > 2.0) {
               ent.scorchTimer = 0;
               tryTakeDamage();
-              setHeroThought("No! The flames have breached the sacred center! Everything is burning—I must extinguish the fire before all is lost!");
+              setHeroThought(t('heroThought.fire_breached_center'));
             }
           }
 
@@ -1285,7 +1229,7 @@ export function GameCanvas({
           // Threat reached the rabbit hole
           if (hd < 48) {
             tryTakeDamage();
-            setHeroThought("They've reached the threshold! The rabbit hole is under siege - get back, you abominations!");
+            setHeroThought(t('heroThought.creeping_illness_breach'));
             // Reposition threat to outer perimeter so player must still eliminate the total required
             const respawnAngle = Math.random() * Math.PI * 2;
             const respawnR = 680 + Math.random() * 120;
@@ -1392,7 +1336,7 @@ export function GameCanvas({
             const idx = ent.type === 'special_item_1' ? 0 : ent.type === 'special_item_2' ? 1 : 2;
             state.entities.splice(i, 1);
             propsRef.current.onCollectSpecialItem(idx);
-            setHeroThought(`I hold the ${ent.displayName} in my hands... Its truth hums within me. Now I have the strength to confront the rabbit again.`);
+            setHeroThought(t('heroThought.collected_special_item', { item: ent.displayName }));
             continue;
           }
         }
@@ -1421,7 +1365,7 @@ export function GameCanvas({
                   });
                 }
                 if (state.taskProgress < state.taskMax) {
-                  setHeroThought(`A glimmer of peace... (${state.taskProgress}/${state.taskMax}) daisies collected. Keep searching!`);
+                  setHeroThought(t('heroThought.peace_daisy_progress', { progress: state.taskProgress, max: state.taskMax }));
                 }
               }
               state.entities.splice(i, 1);
@@ -1443,7 +1387,7 @@ export function GameCanvas({
                 setTasksDone(true);
                 setHeroThought(getTaskEndingThought(worldview));
               } else {
-                setHeroThought(`One fire out! But the flames are still crackling—${remainingFires} more to extinguish!`);
+                setHeroThought(t('heroThought.fire_extinguished_progress', { remaining: remainingFires }));
               }
               continue;
             }
@@ -1458,9 +1402,9 @@ export function GameCanvas({
                 radius: 40
               });
               if (state.taskProgress >= state.taskMax) {
-                setHeroThought("Every cage is open! Listen to their wings beating against the sky... My spirit feels lighter. I am ready to confront the rabbit at the center.");
+                setHeroThought(t('heroThought.caged_birds_all_freed'));
               } else {
-                setHeroThought(`Fly free! Another soul liberated from captivity (${state.taskProgress}/${state.taskMax}). I must reach the others!`);
+                setHeroThought(t('heroThought.caged_bird_freed_progress', { progress: state.taskProgress, max: state.taskMax }));
               }
             }
           }
@@ -1473,7 +1417,7 @@ export function GameCanvas({
                 radius: 38
               });
               state.entities.splice(i, 1);
-              setHeroThought(`The soil breathes again. Another stain wiped clean (${state.taskProgress}/${state.taskMax}). I will reclaim this whole forest.`);
+              setHeroThought(t('heroThought.illness_stain_cleansed_progress', { progress: state.taskProgress, max: state.taskMax }));
               continue;
             }
           }
@@ -1486,7 +1430,7 @@ export function GameCanvas({
                 radius: 38
               });
               state.entities.splice(i, 1);
-              setHeroThought(`Vanished into dust! The rabbit hole is safer now (${state.taskProgress}/${state.taskMax}). Keep pressing on!`);
+              setHeroThought(t('heroThought.creeping_illness_banished_progress', { progress: state.taskProgress, max: state.taskMax }));
               continue;
             }
           }
@@ -1494,9 +1438,9 @@ export function GameCanvas({
             if (dist(state.player, ent) < ent.radius + 15) {
               if (ent.hasKey) {
                  state.taskProgress++;
-                 setHeroThought("I found it! A cold brass key resting in the loam... this Wonder was worthwhile after all! Now I can escape through the rabbit hole at the center.");
+                 setHeroThought(t('heroThought.wonder_key_found'));
               } else {
-                 setHeroThought("Just empty roots and dry dirt here... But I refuse to give up. The truth must be hidden in another burrow.");
+                 setHeroThought(t('heroThought.wonder_burrow_empty'));
               }
               state.entities.splice(i, 1);
             }
@@ -1506,15 +1450,13 @@ export function GameCanvas({
               const expectedColor = state.taskState.order[state.taskState.progress];
               if (ent.color === expectedColor) {
                  state.taskState.progress++;
-                //  setHeroThought(`The colors align! Found ${ent.color}... Next I must look for ${state.taskState.order[state.taskState.progress] || 'the final answer'}!`);
-                setHeroThought(`The colors align! Found ${ent.color}... Which color should come next? || 'the final answer'}!`);
+                 setHeroThought(t('heroThought.mushroom_color_match', { color: ent.color }));
                  if (state.taskState.progress >= 3) {
                     state.taskProgress = 3; // Finished
                  }
               } else {
                  state.taskState.progress = 0;
-                //  setHeroThought(`No... that wasn't the right color! Needed ${expectedColor}. The pattern broke and slipped away.`);
-                setHeroThought(`No... that wasn't the right color! The pattern broke and slipped away.`);
+                 setHeroThought(t('heroThought.mushroom_color_wrong'));
               }
               state.entities.splice(i, 1);
             }
@@ -1568,7 +1510,7 @@ export function GameCanvas({
           if (ent.type === 'task_infected_flora' || ent.type === 'task_fight') {
             if (dist(state.player, ent) < ent.radius + 12) {
                tryTakeDamage();
-               setHeroThought("Cough... the sickening pollen is choking the air! Keep distance and hover the cursor over the flora to purge it!");
+               setHeroThought(t('heroThought.flora_pollen_warning'));
             }
 
             // Hover cursor over flora to deplete its HP over 5 seconds
@@ -1600,7 +1542,7 @@ export function GameCanvas({
                 if (ent.hoverThoughtTimer > 1.2) {
                   ent.hoverThoughtTimer = 0;
                   const secLeft = Math.max(0.1, (ent.hp / ((ent.maxHp || INFECTED_FLORA_MAX_HP) / INFECTED_FLORA_PURGE_SECONDS))).toFixed(1);
-                  setHeroThought(`Channeling willpower to cleanse the blight... ${secLeft}s remaining!`);
+                  setHeroThought(t('heroThought.flora_cleansing_channel', { secLeft }));
                 }
 
                 if (ent.hp <= 0) {
@@ -1613,7 +1555,7 @@ export function GameCanvas({
                   });
                   state.entities.splice(i, 1);
                   if (state.taskProgress < state.taskMax) {
-                    setHeroThought(`Infected flora purged! Hope returns to the forest (${state.taskProgress}/${state.taskMax}).`);
+                    setHeroThought(t('heroThought.flora_purged_progress', { progress: state.taskProgress, max: state.taskMax }));
                   }
                   continue;
                 }
@@ -1637,7 +1579,7 @@ export function GameCanvas({
                   ent.y = CENTER - 80;
                   ent.isFinal = true;
                   ent.fading = 'in';
-                  setHeroThought("Wait - the real rabbit hole has opened up back at the center! I have to hurry back!");
+                  setHeroThought(t('heroThought.real_rabbit_hole_opened'));
                 } else {
                   // Move to new random position within INNER_RADIUS at least 400 away from player
                   let newX = CENTER;
@@ -1657,9 +1599,9 @@ export function GameCanvas({
                   ent.y = newY;
                   ent.fading = 'in';
                   if (ent.escapes === 1) {
-                    setHeroThought("It dissolved right before my eyes?! what Dissatisfaction... No, I won't let it deceive me. Keep searching!");
+                    setHeroThought(t('heroThought.hole_dissolved_first'));
                   } else if (ent.escapes === 2) {
-                    setHeroThought("Another cruel illusion! It vanished again... But the real exit must exist. I must press on!");
+                    setHeroThought(t('heroThought.hole_dissolved_second'));
                   }
                 }
               }
@@ -1679,7 +1621,7 @@ export function GameCanvas({
                   setHeroThought(getTaskEndingThought(worldview));
                 } else {
                   ent.fading = 'out';
-                  setHeroThought("It's shimmering and fading away! Quick, reach it before it disappears!");
+                  setHeroThought(t('heroThought.hole_shimmering_fading'));
                 }
               }
             }
@@ -1770,14 +1712,14 @@ export function GameCanvas({
                 ent.targetY = newY;
                 ent.isFleeing = true;
                 state.taskProgress = currentEscapes + 1;
-                setHeroThought("Wait! Where are you going? Come back! Such dissapointment!");
+                setHeroThought(t('heroThought.rabbit_fleeing'));
               } else if (currentEscapes === 3) {
                 // 4th time: Returns to the center!
                 ent.targetX = CENTER;
                 ent.targetY = CENTER;
                 ent.isFleeing = true;
                 state.taskProgress = 4;
-                setHeroThought("Wait! Where are you going? Come back! Such dissapointment!");
+                setHeroThought(t('heroThought.rabbit_fleeing'));
               }
             }
           }
@@ -1787,7 +1729,7 @@ export function GameCanvas({
             if (!ent.hasLoggedSubmissionReach) {
               ent.hasLoggedSubmissionReach = true;
               logTelemetry(sessionId, 'submission', { reason: 'primal_reached_before_tasks', interaction: 'proximity_reach' });
-              setHeroThought("The White Rabbit's gaze is distant and cold. They won't let me pass for now.");
+              setHeroThought(t('heroThought.primal_distant_cold'));
             }
           } else if (dist(state.player, ent) > ent.radius + 60) {
             ent.hasLoggedSubmissionReach = false;
@@ -1802,7 +1744,7 @@ export function GameCanvas({
 
             if (needsRelic) {
               const itemNames = ["Shattered Mirror of the Past", "Emblem of the Defiant", "Extinction Ledger"];
-              setHeroThought(`Their conviction is an impenetrable fortress... I cannot break through with words alone. I must find the ${itemNames[curAttempt - 2]} in the woods!`);
+              setHeroThought(t('heroThought.primal_needs_relic', { item: itemNames[curAttempt - 2] }));
               // Prevent getting stuck in a loop by shifting player target slightly away
               const shiftX = state.player.x > ent.x ? 25 : -25;
               const shiftY = state.player.y > ent.y ? 25 : -25;
@@ -1820,7 +1762,7 @@ export function GameCanvas({
 
       if (state.hearts <= 0 && !state.dead) {
          state.dead = true;
-         setHeroThought("My heart feels so heavy... the despair has swallowed me. But the story isn't over yet...");
+         setHeroThought(t('heroThought.death_hearts_zero'));
          propsRef.current.onGameOver();
       }
       
@@ -3757,40 +3699,40 @@ export function GameCanvas({
          }
       }
 
-      // On-screen text notification for Safe Zone in canvas screen space
-      const playerDistCenter = Math.hypot(state.player.x - CENTER, state.player.y - CENTER);
-      const safeRatio = Math.min(1, Math.max(0, (playerDistCenter - INNER_RADIUS) / 100));
-      if (safeRatio > 0.05) {
-        ctx.save();
-        ctx.textAlign = 'center';
+      // // On-screen text notification for Safe Zone in canvas screen space
+      // const playerDistCenter = Math.hypot(state.player.x - CENTER, state.player.y - CENTER);
+      // const safeRatio = Math.min(1, Math.max(0, (playerDistCenter - INNER_RADIUS) / 100));
+      // if (safeRatio > 0.05) {
+      //   ctx.save();
+      //   ctx.textAlign = 'center';
         
-        const bannerW = Math.min(480, width - 36);
-        const bannerH = 42;
-        const bannerX = width / 2;
-        const bannerY = height - 38;
+      //   const bannerW = Math.min(480, width - 36);
+      //   const bannerH = 42;
+      //   const bannerX = width / 2;
+      //   const bannerY = height - 38;
 
-        ctx.fillStyle = `rgba(6, 44, 28, ${0.85 * safeRatio})`;
-        ctx.strokeStyle = `rgba(52, 211, 153, ${0.75 * safeRatio})`;
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = 'rgba(16, 185, 129, 0.45)';
-        ctx.shadowBlur = 10;
+      //   ctx.fillStyle = `rgba(6, 44, 28, ${0.85 * safeRatio})`;
+      //   ctx.strokeStyle = `rgba(52, 211, 153, ${0.75 * safeRatio})`;
+      //   ctx.lineWidth = 1.5;
+      //   ctx.shadowColor = 'rgba(16, 185, 129, 0.45)';
+      //   ctx.shadowBlur = 10;
 
-        ctx.beginPath();
-        ctx.roundRect(bannerX - bannerW / 2, bannerY - bannerH / 2, bannerW, bannerH, 21);
-        ctx.fill();
-        ctx.stroke();
+      //   ctx.beginPath();
+      //   ctx.roundRect(bannerX - bannerW / 2, bannerY - bannerH / 2, bannerW, bannerH, 21);
+      //   ctx.fill();
+      //   ctx.stroke();
 
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = `rgba(167, 243, 208, ${safeRatio})`;
-        ctx.font = 'bold 11px monospace';
-        ctx.fillText('✦ SAFE ZONE — OUTSKIRTS ✦', bannerX, bannerY - 4);
+      //   ctx.shadowBlur = 0;
+      //   ctx.fillStyle = `rgba(167, 243, 208, ${safeRatio})`;
+      //   ctx.font = 'bold 11px monospace';
+      //   ctx.fillText('✦ SAFE ZONE — OUTSKIRTS ✦', bannerX, bannerY - 4);
 
-        ctx.fillStyle = `rgba(209, 250, 229, ${safeRatio * 0.92})`;
-        ctx.font = '10px monospace';
-        ctx.fillText('No hazards here. Nothing to interact with — return inward.', bannerX, bannerY + 11);
+      //   ctx.fillStyle = `rgba(209, 250, 229, ${safeRatio * 0.92})`;
+      //   ctx.font = '10px monospace';
+      //   ctx.fillText('No hazards here. Nothing to interact with — return inward.', bannerX, bannerY + 11);
 
-        ctx.restore();
-      }
+      //   ctx.restore();
+      // }
     };
 
     let wasPaused = false;
@@ -3863,10 +3805,10 @@ export function GameCanvas({
           if (!state.tasksCompleted) {
              const isDisappointmentTask = worldview.fundamentalNeed === 'wonder' && worldview.needType === 'pain';
              if (isDisappointmentTask) {
-               setHeroThought("Wait! Where are you going? Come back!");
+               setHeroThought(t('heroThought.rabbit_fleeing_short'));
              } else {
                logTelemetry(sessionId, 'submission', { reason: 'primal_reached_before_tasks', interaction: 'right_click' });
-               setHeroThought("The White Rabbit's gaze is distant and cold. They won't let me pass for now.");
+               setHeroThought(t('heroThought.primal_distant_cold'));
              }
           } else if (!isUnlocked) {
              const curAttempt = propsRef.current.debateAttempt;
@@ -3874,7 +3816,7 @@ export function GameCanvas({
              const needsRelic = curAttempt > 1 && !curCollected[curAttempt - 2];
              if (needsRelic) {
                const itemNames = ["Shattered Mirror of the Past", "Emblem of the Defiant", "Extinction Ledger"];
-               setHeroThought(`Their conviction is an impenetrable fortress... I cannot break through with words alone. I must find the ${itemNames[curAttempt - 2]} in the woods!`);
+               setHeroThought(t('heroThought.primal_needs_relic', { item: itemNames[curAttempt - 2] }));
              } else {
                propsRef.current.onInteractPrimal();
              }
@@ -3891,16 +3833,16 @@ export function GameCanvas({
                  state.entities.splice(i, 1);
                } else {
                  logTelemetry(sessionId, 'submission', { reason: 'failed_password' });
-                 setHeroThought("That password was wrong... doubt is gnawing at my resolve. How can I know what is true in this maze?");
+                 setHeroThought(t('heroThought.wrong_password'));
                }
             } else if (ent.type === 'task_fight' || ent.type === 'task_infected_flora') {
                ent.hp--;
                if (ent.hp <= 0) {
                  state.taskProgress++;
                  state.entities.splice(i, 1);
-                 setHeroThought(`Infected flora purged! Hope returns to the forest (${state.taskProgress}/${state.taskMax}).`);
+                 setHeroThought(t('heroThought.flora_purged_progress', { progress: state.taskProgress, max: state.taskMax }));
                } else {
-                 setHeroThought(`Purging the blight... it's weakening! Just a few more strikes!`);
+                 setHeroThought(t('heroThought.flora_strike_progress'));
                }
             } else if (ent.type === 'task_illness_stain' || ent.type === 'task_creeping_illness') {
                state.taskProgress++;
@@ -3911,8 +3853,8 @@ export function GameCanvas({
                });
                state.entities.splice(i, 1);
                const msg = ent.type === 'task_illness_stain' 
-                 ? `The soil breathes again. Another stain wiped clean (${state.taskProgress}/${state.taskMax}). I will reclaim this whole forest.`
-                 : `Vanished into dust! The rabbit hole is safer now (${state.taskProgress}/${state.taskMax}). Keep pressing on!`;
+                 ? t('heroThought.illness_stain_cleansed_progress', { progress: state.taskProgress, max: state.taskMax })
+                 : t('heroThought.creeping_illness_banished_progress', { progress: state.taskProgress, max: state.taskMax });
                setHeroThought(msg);
             } else if (ent.type === 'task_forest_fire') {
                state.taskProgress++;
@@ -3929,7 +3871,7 @@ export function GameCanvas({
                  setTasksDone(true);
                  setHeroThought(getTaskEndingThought(worldview));
                } else {
-                 setHeroThought(`One fire out! But the flames are still crackling—${remainingFires} more to extinguish!`);
+                 setHeroThought(t('heroThought.fire_extinguished_progress', { remaining: remainingFires }));
                }
             } else if (ent.type === 'task_caged_bird' && !ent.isReleased) {
                ent.isReleased = true;
@@ -3942,7 +3884,7 @@ export function GameCanvas({
                if (state.taskProgress >= state.taskMax) {
                  setHeroThought(getTaskEndingThought(worldview));
                } else {
-                 setHeroThought(`Fly free! Another soul liberated from captivity (${state.taskProgress}/${state.taskMax}). I must reach the others!`);
+                 setHeroThought(t('heroThought.caged_bird_freed_progress', { progress: state.taskProgress, max: state.taskMax }));
                }
             } else if (ent.type === 'task_blueprint' && state.taskProgress >= 3) {
             }
@@ -3981,7 +3923,7 @@ export function GameCanvas({
         <div className="relative max-w-xs sm:max-w-md bg-neutral-950/90 border border-amber-500/40 rounded-2xl p-4 shadow-[0_0_35px_rgba(0,0,0,0.85)] backdrop-blur-md text-center">
           <div className="flex items-center justify-center gap-1.5 text-[10px] uppercase font-mono tracking-widest text-amber-400 font-bold mb-1.5">
             <Lightbulb className="w-3 h-3 text-amber-400 animate-pulse" />
-            <span>thoughts</span>
+            <span>{t('hud.thoughtsTitle')}</span>
           </div>
           <p className="font-cinzel text-xs sm:text-sm text-neutral-100 leading-relaxed italic drop-shadow">
             "{heroThought}"
@@ -4006,10 +3948,10 @@ export function GameCanvas({
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 animate-pulse" />
           <div className="flex flex-col text-center">
             <span className="font-cinzel text-xs sm:text-sm font-bold text-emerald-300 tracking-widest uppercase">
-              Safe Zone — Outskirts
+              {t('hud.safeZoneTitle')}
             </span>
             <span className="text-[11px] sm:text-xs font-mono text-emerald-200/90 font-medium tracking-wide">
-              Safe from all hazards. Nothing to interact with here — return inward to continue.
+              {t('hud.safeZoneSubtitle')}
             </span>
           </div>
         </div>
@@ -4031,9 +3973,9 @@ export function GameCanvas({
         </div>
         <div className="flex flex-col gap-0.5 text-[11px] font-mono text-neutral-400 tracking-wide">
           <span className="text-amber-400/90 flex items-center gap-1">
-            <span>✦ Cursor on Hero:</span> <span className="text-neutral-300">Inner Thoughts</span>
+            <span>{t('hud.cursorOnHero')}:</span> <span className="text-neutral-300">{t('hud.innerThoughts')}</span>
           </span>
-          <span className="text-neutral-500">Cursor away: Walk or Act</span>
+          <span className="text-neutral-500">{t('hud.cursorAway')}</span>
         </div>
       </div>
     </div>

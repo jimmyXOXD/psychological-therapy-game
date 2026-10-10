@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Send, Terminal, X, RefreshCw, Trophy, Lightbulb, Eye, EyeOff, Check, Copy, Compass } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { registerWin, logTelemetry } from '../firebase';
+import { t, getLocale } from '../locales/i18n';
 
 interface Props {
   worldview: Worldview;
@@ -32,30 +33,37 @@ export function StrategySimulation({ worldview, onMainMenu }: Props) {
   const role = singularAgent[worldview.agent] || worldview.agent;
 
   const getInitialArgument = (agentRole: string, wv: Worldview) => {
+    const localizedRole = t(`simulation.agentRole.${agentRole}`);
+
     const needGoal = wv.needType === 'need'
-      ? `experience ${wv.selectedTerm}`
-      : `escape the pain of ${wv.selectedTerm}`;
+      ? t('simulation.needGoal.need', { term: wv.selectedTerm })
+      : t('simulation.needGoal.pain', { term: wv.selectedTerm });
 
     const coreBelief = wv.fitness === 'unallowed'
-      ? `the world will never allow humans to ${needGoal}`
-      : `humans are too inherently flawed to ${needGoal}`;
+      ? t('simulation.coreBelief.unallowed', { needGoal })
+      : t('simulation.coreBelief.unfit', { needGoal });
 
     const outcomeBelief = wv.validation === 'granted'
-      ? 'any attempt to pursue it is doomed to inevitable failure'
-      : 'there is no validation to even try, making any wait endless and futile';
+      ? t('simulation.outcomeBelief.granted')
+      : t('simulation.outcomeBelief.validated');
 
-    const pressureContext = {
-      'Low Environmental': 'subtle, prolonged environmental instability',
-      'High Environmental': 'severe environmental hazards',
-      'Low Social': 'lingering social isolation and pressure',
-      'High Social': 'intense judgment and scrutiny from others'
-    }[wv.reason] || `${wv.reason.toLowerCase()} pressures`;
+    const pressureKeyMap: Record<string, string> = {
+      'Low Environmental': 'simulation.pressureContext.lowEnvironmental',
+      'High Environmental': 'simulation.pressureContext.highEnvironmental',
+      'Low Social': 'simulation.pressureContext.lowSocial',
+      'High Social': 'simulation.pressureContext.highSocial'
+    };
+    const pressureKey = pressureKeyMap[wv.reason];
+    const pressureContext = pressureKey
+      ? t(pressureKey)
+      : t('simulation.pressureContext.default', { reason: wv.reason.toLowerCase() });
 
-    return `I stand before you as your ${agentRole}. You cannot pass beyond this threshold.
-
-I believe that ${coreBelief} under ${pressureContext}—${outcomeBelief}. In my eyes, this conclusion is absolute.
-
-If you wish to cross, you must debate me and challenge my conviction. Argue your case with reason—why should I let you pass?`;
+    return t('simulation.initialArgument', {
+      agentRole: localizedRole,
+      coreBelief,
+      pressureContext,
+      outcomeBelief
+    });
   };
 
   // Chat state
@@ -75,13 +83,13 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
     let itemText = '';
     let storyType = '';
     if (attempt === 2) {
-      itemText = '*You present the Shattered Mirror of the Past*';
+      itemText = t('simulation.itemPresentation.mirror');
       storyType = 'traumatic';
     } else if (attempt === 3) {
-      itemText = '*You present the Emblem of the Defiant*';
+      itemText = t('simulation.itemPresentation.emblem');
       storyType = 'success';
     } else if (attempt === 4) {
-      itemText = '*You present the Extinction Ledger*';
+      itemText = t('simulation.itemPresentation.ledger');
       storyType = 'extinction';
     }
 
@@ -96,14 +104,15 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
           worldview,
           history: messages,
           message: itemText,
-          specialItemStoryType: storyType
+          specialItemStoryType: storyType,
+          language: worldview.language || getLocale()
         })
       });
       const data = await res.json();
       if (res.ok) {
         setMessages([...tempMessages, { role: 'model', text: data.text }]);
       } else {
-        setMessages([...tempMessages, { role: 'model', text: `[System Error]: ${data.error || 'Failed to trigger special story.'}` }]);
+        setMessages([...tempMessages, { role: 'model', text: data.error ? `[System Error]: ${data.error}` : t('simulation.errorSpecialStory') }]);
       }
     } catch (err) {
       console.error(err);
@@ -137,7 +146,8 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
         body: JSON.stringify({
           worldview: worldview,
           history: messages,
-          message: inputText
+          message: inputText,
+          language: worldview.language || getLocale()
         })
       });
       const chatData = await chatRes.json();
@@ -155,16 +165,18 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatLog: updatedMessages,
-          worldview: worldview
+          worldview: worldview,
+          language: worldview.language || getLocale()
         })
       });
       const evalData = await evalRes.json();
+      const activeLocale = worldview.language || getLocale();
       
       if (evalData.unlocked && !isUnlocked) {
         setIsUnlocked(true);
-        const finalSummary = evalData.summary || 'Your logic prevailed. The negative faith is broken.';
+        const finalSummary = evalData.summary || t('simulation.defaultVictorySummary');
         setEvalSummary(finalSummary);
-        setMessages(prev => [...prev, { role: 'model', text: '...Your logic... it holds. The barrier is broken.' }]);
+        setMessages(prev => [...prev, { role: 'model', text: t('simulation.barrierBroken') }]);
         
         registerWin(sessionId, worldview, finalSummary);
         
@@ -191,17 +203,17 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
           const nextAttempt = debateAttempt + 1;
           if (nextAttempt >= 5) {
             // Out of attempts entirely - Game Over!
-            setMessages(prev => [...prev, { role: 'model', text: '[System Message]: You have failed to win the debate after the final attempt. Despair claims you...' }]);
+            setMessages(prev => [...prev, { role: 'model', text: t('simulation.gameOverDespair') }]);
             setTimeout(() => {
               setIsGameOver(true);
               setShowChat(false);
             }, 3500);
           } else {
-            const itemNames = ["Shattered Mirror of the Past", "Emblem of the Defiant", "Extinction Ledger"];
-            const nextItemName = itemNames[nextAttempt - 2];
+            const itemKeys = ['simulation.item.mirror', 'simulation.item.emblem', 'simulation.item.ledger'];
+            const nextItemName = t(itemKeys[nextAttempt - 2]);
             setMessages(prev => [...prev, { 
               role: 'model', 
-              text: `[System Message]: This attempt has ended. You failed to break The White Rabbit's faith. Return to the forest and find the "${nextItemName}" to unlock the next debate.` 
+              text: t('simulation.attemptEnded', { nextItemName }) 
             }]);
             setTimeout(() => {
               setShowChat(false);
@@ -229,10 +241,11 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
     } else {
       setDebateAttempt(nextAttempt);
       setPromptsSentInAttempt(0);
-      const itemNames = ["Shattered Mirror of the Past", "Emblem of the Defiant", "Extinction Ledger"];
+      const itemKeys = ['simulation.item.mirror', 'simulation.item.emblem', 'simulation.item.ledger'];
+      const nextItemName = t(itemKeys[nextAttempt - 2]);
       setMessages(prev => [...prev, {
         role: 'model',
-        text: `[System Message]: You closed the chat. This attempt has ended. Seek and collect the "${itemNames[nextAttempt - 2]}" in the forest to continue.`
+        text: t('simulation.chatClosed', { nextItemName })
       }]);
     }
   };
@@ -281,7 +294,10 @@ If you wish to cross, you must debate me and challenge my conviction. Argue your
   };
 
   return (
-    <div className="w-full h-screen relative bg-black overflow-hidden font-mono text-orange-200 selection:bg-orange-900">
+    <div 
+      dir={getLocale() === 'he' ? 'rtl' : 'ltr'}
+      className="w-full h-screen relative bg-black overflow-hidden font-mono text-orange-200 selection:bg-orange-900"
+    >
       <GameCanvas 
         key={sessionId}
         worldview={worldview} 

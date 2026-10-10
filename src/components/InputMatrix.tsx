@@ -21,8 +21,10 @@ import {
   Orbit,
   ArrowRight,
   ArrowLeft,
-  Dices
+  Dices,
+  Languages
 } from 'lucide-react';
+import { t, setLocale, getLocale, SupportedLocale } from '../locales/i18n';
 
 interface PairDef {
   need: string;
@@ -32,28 +34,34 @@ interface PairDef {
   icon: any;
 }
 
+const languages: { id: SupportedLocale; label: string; code: string }[] = [
+  { id: 'en', label: 'English', code: 'EN' },
+  { id: 'de', label: 'Deutsch', code: 'DE' },
+  { id: 'he', label: 'Hebrew', code: 'HE' }
+];
+
 const pairs: PairDef[] = [
-  { need: 'peace', pain: 'dissatisfaction', needLabel: 'Peace', painLabel: 'Dissatisfaction', icon: Shield },
-  { need: 'wonder', pain: 'disappointment', needLabel: 'Wonder', painLabel: 'Disappointment', icon: Compass },
-  { need: 'support', pain: 'loneliness', needLabel: 'Support', painLabel: 'Loneliness', icon: Users },
-  { need: 'certainty', pain: 'uncertainty', needLabel: 'Certainty', painLabel: 'Uncertainty', icon: KeyRound },
-  { need: 'hope', pain: 'physical pain', needLabel: 'Hope', painLabel: 'Physical Pain', icon: Flame },
-  { need: 'attention', pain: 'imprisonment', needLabel: 'Attention', painLabel: 'Imprisonment', icon: Target },
-  { need: 'privacy', pain: 'change', needLabel: 'Privacy', painLabel: 'Change', icon: Lock }
+  { need: 'peace', pain: 'dissatisfaction', get needLabel() { return t('matrix.needLabel.peace'); }, get painLabel() { return t('matrix.painLabel.dissatisfaction'); }, icon: Shield },
+  { need: 'wonder', pain: 'disappointment', get needLabel() { return t('matrix.needLabel.wonder'); }, get painLabel() { return t('matrix.painLabel.disappointment'); }, icon: Compass },
+  { need: 'support', pain: 'loneliness', get needLabel() { return t('matrix.needLabel.support'); }, get painLabel() { return t('matrix.painLabel.loneliness'); }, icon: Users },
+  { need: 'certainty', pain: 'uncertainty', get needLabel() { return t('matrix.needLabel.certainty'); }, get painLabel() { return t('matrix.painLabel.uncertainty'); }, icon: KeyRound },
+  { need: 'hope', pain: 'physical pain', get needLabel() { return t('matrix.needLabel.hope'); }, get painLabel() { return t('matrix.painLabel.physical pain'); }, icon: Flame },
+  { need: 'attention', pain: 'imprisonment', get needLabel() { return t('matrix.needLabel.attention'); }, get painLabel() { return t('matrix.painLabel.imprisonment'); }, icon: Target },
+  { need: 'privacy', pain: 'change', get needLabel() { return t('matrix.needLabel.privacy'); }, get painLabel() { return t('matrix.painLabel.change'); }, icon: Lock }
 ];
 
 const constraints: { id: Constraint; title: string; subtitle: string; icon: any }[] = [
-  { id: 'High Environmental', title: 'High Environmental', subtitle: 'Imminent danger & visceral reality', icon: Mountain },
-  { id: 'Low Environmental', title: 'Low Environmental', subtitle: 'Prolonged decay & slow erosion', icon: CloudRain },
-  { id: 'High Social', title: 'High Social', subtitle: 'Sudden judgment & fierce competition', icon: Users2 },
-  { id: 'Low Social', title: 'Low Social', subtitle: 'Quiet estrangement & cold neglect', icon: EyeOff }
+  { id: 'High Environmental', get title() { return t('matrix.constraint.highEnvironmental.title'); }, get subtitle() { return t('matrix.constraint.highEnvironmental.subtitle'); }, icon: Mountain },
+  { id: 'Low Environmental', get title() { return t('matrix.constraint.lowEnvironmental.title'); }, get subtitle() { return t('matrix.constraint.lowEnvironmental.subtitle'); }, icon: CloudRain },
+  { id: 'High Social', get title() { return t('matrix.constraint.highSocial.title'); }, get subtitle() { return t('matrix.constraint.highSocial.subtitle'); }, icon: Users2 },
+  { id: 'Low Social', get title() { return t('matrix.constraint.lowSocial.title'); }, get subtitle() { return t('matrix.constraint.lowSocial.subtitle'); }, icon: EyeOff }
 ];
 
 const agents: { id: AgentOfChange; title: string; subtitle: string; icon: any }[] = [
-  { id: 'lovers', title: 'The Lover', subtitle: 'Biological legacy & survival', icon: Heart },
-  { id: 'bosses', title: 'The Boss', subtitle: 'Command & value extraction', icon: Briefcase },
-  { id: 'subordinates', title: 'The Subordinate', subtitle: 'Invested time & security', icon: UserCheck },
-  { id: 'strangers', title: 'The Stranger', subtitle: 'Self-preservation & distance', icon: Footprints }
+  { id: 'lovers', get title() { return t('matrix.agent.lovers.title'); }, get subtitle() { return t('matrix.agent.lovers.subtitle'); }, icon: Heart },
+  { id: 'bosses', get title() { return t('matrix.agent.bosses.title'); }, get subtitle() { return t('matrix.agent.bosses.subtitle'); }, icon: Briefcase },
+  { id: 'subordinates', get title() { return t('matrix.agent.subordinates.title'); }, get subtitle() { return t('matrix.agent.subordinates.subtitle'); }, icon: UserCheck },
+  { id: 'strangers', get title() { return t('matrix.agent.strangers.title'); }, get subtitle() { return t('matrix.agent.strangers.subtitle'); }, icon: Footprints }
 ];
 
 interface Props {
@@ -62,6 +70,8 @@ interface Props {
 
 export function InputMatrix({ onComplete }: Props) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [locale, setLocaleState] = useState<SupportedLocale>(getLocale());
+  const [isLangOpen, setIsLangOpen] = useState(false);
 
   // Worldview state
   const [fitness, setFitness] = useState<'unallowed' | 'unfit'>('unfit');
@@ -73,6 +83,12 @@ export function InputMatrix({ onComplete }: Props) {
 
   const selectedPair = pairs[pairIdx];
   const selectedTerm = needType === 'need' ? selectedPair.need : selectedPair.pain;
+
+  const handleSelectLanguage = (newLocale: SupportedLocale) => {
+    setLocale(newLocale);
+    setLocaleState(newLocale);
+    setIsLangOpen(false);
+  };
 
   // Auto-advance helper with gentle organic delay for feedback
   const handleSelectDuality = (idx: number) => {
@@ -115,19 +131,23 @@ export function InputMatrix({ onComplete }: Props) {
       fundamentalNeed: selectedPair.need,
       selectedTerm,
       reason: constraint,
-      agent
+      agent,
+      language: locale
     });
   };
 
   const stepTitles = [
-    { num: 1, label: 'The Duality', tag: selectedTerm },
-    { num: 2, label: 'The Pressure', tag: constraint.split(' ')[0] },
-    { num: 3, label: 'The Guardian', tag: agents.find(a => a.id === agent)?.title.replace('The ', '') },
-    { num: 4, label: 'The Faith', tag: 'Axiom' }
+    { num: 1, label: t('matrix.stepTitle.duality'), tag: needType === 'need' ? selectedPair.needLabel : selectedPair.painLabel },
+    { num: 2, label: t('matrix.stepTitle.pressure'), tag: (constraints.find(c => c.id === constraint)?.title || constraint).split(' ')[0] },
+    { num: 3, label: t('matrix.stepTitle.guardian'), tag: (agents.find(a => a.id === agent)?.title || agent).replace('The ', '').replace('Der ', '').replace('ה', '') },
+    { num: 4, label: t('matrix.stepTitle.faith'), tag: 'Axiom' }
   ];
 
   return (
-    <div className="relative min-h-screen w-full bg-neutral-950 text-neutral-100 flex flex-col items-center justify-between p-4 sm:p-8 overflow-hidden select-none">
+    <div 
+      dir={locale === 'he' ? 'rtl' : 'ltr'}
+      className="relative min-h-screen w-full bg-neutral-950 text-neutral-100 flex flex-col items-center justify-between p-4 sm:p-8 overflow-hidden select-none"
+    >
       {/* Dreamy surreal background layers */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-25 scale-105 pointer-events-none blur-sm"
@@ -151,7 +171,7 @@ export function InputMatrix({ onComplete }: Props) {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-900/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
 
       {/* TOP HEADER: Title & Guided Descent Thread */}
-      <header className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-4 text-center mt-2">
+      <header className="relative z-50 w-full max-w-4xl flex flex-col items-center gap-4 text-center mt-2">
         <div className="flex items-center justify-between w-full px-2">
           <div className="flex items-center gap-2">
             <h1 className="
@@ -165,16 +185,57 @@ export function InputMatrix({ onComplete }: Props) {
             </h1>
           </div>
 
-          {/* Randomize Button */}
-          <button
-            type="button"
-            onClick={randomizeFate}
-            className="group px-3.5 py-1.5 rounded-full bg-neutral-900/80 hover:bg-amber-950/60 border border-amber-500/30 hover:border-amber-400 text-xs font-mono text-amber-300 flex items-center gap-2 shadow-lg transition-all duration-200 cursor-pointer backdrop-blur-md"
-            title="Roll a random combination"
-          >
-            <Dices className="w-4 h-4 text-amber-400 transition-transform group-hover:rotate-180" />
-            <span className="hidden sm:inline">Randomize Fate</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Language Selection Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="group px-3.5 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-amber-500/50 hover:border-amber-400 text-xs font-mono text-amber-300 flex items-center gap-2 shadow-xl transition-all duration-200 cursor-pointer"
+                title="Select Language"
+              >
+                <Languages className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="font-semibold capitalize">{languages.find(l => l.id === locale)?.label || 'Language'}</span>
+              </button>
+
+              {isLangOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsLangOpen(false)} 
+                  />
+                  <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 z-50 min-w-[140px] rounded-2xl bg-neutral-900 border border-amber-500/50 shadow-2xl p-1.5 flex flex-col gap-1">
+                    {languages.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => handleSelectLanguage(l.id)}
+                        className={`px-3 py-2 rounded-xl text-xs font-mono flex items-center justify-between transition-colors cursor-pointer capitalize ${
+                          locale === l.id
+                            ? 'bg-amber-500 text-neutral-950 font-bold shadow-md'
+                            : 'text-neutral-200 hover:bg-neutral-800 hover:text-amber-300'
+                        }`}
+                      >
+                        <span className="font-medium">{l.label}</span>
+                        <span className="text-[10px] opacity-75 uppercase tracking-widest font-bold">{l.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Randomize Button */}
+            <button
+              type="button"
+              onClick={randomizeFate}
+              className="group px-3.5 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 hover:border-amber-400 text-xs font-mono text-amber-300 flex items-center gap-2 shadow-xl transition-all duration-200 cursor-pointer"
+              title={t('matrix.randomize.title')}
+            >
+              <Dices className="w-4 h-4 text-amber-400 transition-transform group-hover:rotate-180" />
+              <span className="hidden sm:inline">{t('matrix.randomize.button')}</span>
+            </button>
+          </div>
         </div>
 
         {/* Guided Constellation Thread (Interactive steps) */}
@@ -226,10 +287,10 @@ export function InputMatrix({ onComplete }: Props) {
             >
               <div className="text-center space-y-1">
                 <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
-                  What echoes in your mind?
+                  {t('matrix.step1.heading')}
                 </h2>
                 <p className="text-xs sm:text-sm text-neutral-400 font-mono">
-                  Select whether you seek a denied need, or endure an inescapable pain.
+                  {t('matrix.step1.subheading')}
                 </p>
               </div>
 
@@ -244,7 +305,7 @@ export function InputMatrix({ onComplete }: Props) {
                       : 'text-neutral-400 hover:text-neutral-200'
                   }`}
                 >
-                  The Need
+                  {t('matrix.step1.theNeed')}
                 </button>
                 <button
                   type="button"
@@ -255,7 +316,7 @@ export function InputMatrix({ onComplete }: Props) {
                       : 'text-neutral-400 hover:text-neutral-200'
                   }`}
                 >
-                  The Pain
+                  {t('matrix.step1.thePain')}
                 </button>
               </div>
 
@@ -327,10 +388,10 @@ export function InputMatrix({ onComplete }: Props) {
             >
               <div className="text-center space-y-1">
                 <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
-                  The Crucible of Reality
+                  {t('matrix.step2.heading')}
                 </h2>
                 <p className="text-xs sm:text-sm text-neutral-400 font-mono">
-                  What pressure rationalizes your despair?
+                  {t('matrix.step2.subheading')}
                 </p>
               </div>
 
@@ -382,10 +443,10 @@ export function InputMatrix({ onComplete }: Props) {
             >
               <div className="text-center space-y-1">
                 <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
-                  The Guardian of the Threshold
+                  {t('matrix.step3.heading')}
                 </h2>
                 <p className="text-xs sm:text-sm text-neutral-400 font-mono">
-                  Who embodies this conviction and blocks your passage?
+                  {t('matrix.step3.subheading')}
                 </p>
               </div>
 
@@ -437,10 +498,10 @@ export function InputMatrix({ onComplete }: Props) {
             >
               <div className="text-center space-y-1">
                 <h2 className="font-cinzel text-2xl sm:text-3xl text-amber-200 tracking-wider">
-                  The Negative Faith
+                  {t('matrix.step4.heading')}
                 </h2>
                 <p className="text-xs sm:text-sm text-neutral-400 font-mono">
-                  Finalize the core logic that holds this illusion together.
+                  {t('matrix.step4.subheading')}
                 </p>
               </div>
 
@@ -450,10 +511,10 @@ export function InputMatrix({ onComplete }: Props) {
                 <div className="bg-neutral-950/70 p-5 rounded-2xl border border-neutral-800 backdrop-blur-md space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="font-cinzel text-sm sm:text-base text-neutral-200 font-bold tracking-wide">
-                      Who is to Blame for the Circumstances?
+                      {t('matrix.step4.blameTitle')}
                     </div>
                     <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
-                      Where does the negative faith place the fault?
+                      {t('matrix.step4.blameSubtitle')}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -467,13 +528,13 @@ export function InputMatrix({ onComplete }: Props) {
                       }`}
                     >
                       <div>
-                        <div className="font-cinzel text-base font-bold">Unfit</div>
+                        <div className="font-cinzel text-base font-bold">{t('matrix.step4.unfit')}</div>
                         <div className={`text-xs font-mono font-bold mt-0.5 ${fitness === 'unfit' ? 'text-neutral-950' : 'text-amber-400'}`}>
-                          Blame the Self
+                          {t('matrix.step4.blameSelf')}
                         </div>
                       </div>
                       <div className={`text-[11px] font-sans leading-tight ${fitness === 'unfit' ? 'text-neutral-900/90' : 'text-neutral-400'}`}>
-                        The flaw is within us — humans are inherently broken.
+                        {t('matrix.step4.unfitDesc')}
                       </div>
                     </button>
                     <button
@@ -486,13 +547,13 @@ export function InputMatrix({ onComplete }: Props) {
                       }`}
                     >
                       <div>
-                        <div className="font-cinzel text-base font-bold">Unallowed</div>
+                        <div className="font-cinzel text-base font-bold">{t('matrix.step4.unallowed')}</div>
                         <div className={`text-xs font-mono font-bold mt-0.5 ${fitness === 'unallowed' ? 'text-neutral-950' : 'text-amber-400'}`}>
-                          Blame the Environment
+                          {t('matrix.step4.blameEnvironment')}
                         </div>
                       </div>
                       <div className={`text-[11px] font-sans leading-tight ${fitness === 'unallowed' ? 'text-neutral-900/90' : 'text-neutral-400'}`}>
-                        The flaw is in reality — the external world forbids it.
+                        {t('matrix.step4.unallowedDesc')}
                       </div>
                     </button>
                   </div>
@@ -502,10 +563,10 @@ export function InputMatrix({ onComplete }: Props) {
                 <div className="bg-neutral-950/70 p-5 rounded-2xl border border-neutral-800 backdrop-blur-md space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="font-cinzel text-sm sm:text-base text-neutral-200 font-bold tracking-wide">
-                      What is the Expected Outcome?
+                      {t('matrix.step4.outcomeTitle')}
                     </div>
                     <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
-                      What does the negative faith expect to happen?
+                      {t('matrix.step4.outcomeSubtitle')}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -519,9 +580,9 @@ export function InputMatrix({ onComplete }: Props) {
                       }`}
                     >
                       <div>
-                        <div className="font-cinzel text-base font-bold">Not Granted</div>
+                        <div className="font-cinzel text-base font-bold">{t('matrix.step4.notGranted')}</div>
                         <div className={`text-xs font-mono font-bold mt-0.5 ${validation === 'granted' ? 'text-neutral-950' : 'text-amber-400'}`}>
-                          Inevitable Failure
+                          {t('matrix.step4.inevitableFailure')}
                         </div>
                       </div>
                     </button>
@@ -535,9 +596,9 @@ export function InputMatrix({ onComplete }: Props) {
                       }`}
                     >
                       <div>
-                        <div className="font-cinzel text-base font-bold">Not Validated</div>
+                        <div className="font-cinzel text-base font-bold">{t('matrix.step4.notValidated')}</div>
                         <div className={`text-xs font-mono font-bold mt-0.5 ${validation === 'validated' ? 'text-neutral-950' : 'text-amber-400'}`}>
-                          Endless Wait for recognition
+                          {t('matrix.step4.endlessWait')}
                         </div>
                       </div>
                     </button>
@@ -555,21 +616,21 @@ export function InputMatrix({ onComplete }: Props) {
         {/* Living Faith Inscription */}
         <div className="w-full bg-neutral-950/10 hover:bg-neutral-950/20 backdrop-blur-[2px] p-4 sm:p-5 rounded-2xl border border-amber-500/25 shadow-xl text-center transition-colors">
           <div className="font-cinzel text-base sm:text-lg lg:text-xl text-neutral-100 leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-            <span>"Humans are </span>
-            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{fitness}</span>
-            <span> to be </span>
-            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{validation}</span>
-            <span> the </span>
-            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{needType} of {selectedTerm}</span>
-            <span> because of </span>
-            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{constraint}</span>
-            <span> pressure from our </span>
-            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{agent}</span>
+            <span>"{t('matrix.inscription.humansAre')} </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{t(`matrix.inscription.fitness.${fitness}`) || fitness}</span>
+            <span> {t('matrix.inscription.toBe')} </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{t(`matrix.inscription.validation.${validation}`) || validation}</span>
+            <span> {t('matrix.inscription.the')} </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{t(`matrix.inscription.needType.${needType}`) || needType} {t('matrix.inscription.of')} {needType === 'need' ? selectedPair.needLabel : selectedPair.painLabel}</span>
+            <span> {t('matrix.inscription.becauseOf')} </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{constraints.find(c => c.id === constraint)?.title || constraint}</span>
+            <span> {t('matrix.inscription.pressureFromOur')} </span>
+            <span className="text-amber-400 font-bold underline decoration-amber-500/50">{agents.find(a => a.id === agent)?.title || agent}</span>
             <span>."</span>
           </div>
           {NEED_DEFINITIONS[selectedTerm] && (
             <div className="mt-2 text-xs font-mono text-amber-300/80 italic flex items-center justify-center gap-1.5 flex-wrap">
-              <span className="text-amber-400 font-semibold"> {needType === 'need' ? selectedPair.needLabel : selectedPair.painLabel}:</span>
+              <span className="text-amber-400 font-semibold">{needType === 'need' ? selectedPair.needLabel : selectedPair.painLabel}:</span>
               <span>"{NEED_DEFINITIONS[selectedTerm]}"</span>
             </div>
           )}
@@ -583,8 +644,8 @@ export function InputMatrix({ onComplete }: Props) {
               onClick={() => setStep((step - 1) as any)}
               className="px-5 py-2.5 rounded-full bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 text-xs font-mono text-neutral-300 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+              <span>{t('matrix.button.back')}</span>
             </button>
           ) : (
             <div />
@@ -596,8 +657,8 @@ export function InputMatrix({ onComplete }: Props) {
               onClick={() => setStep((step + 1) as any)}
               className="px-6 py-2.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-950/30"
             >
-              <span>Next Stage</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>{t('matrix.button.nextStage')}</span>
+              <ArrowRight className="w-4 h-4 rtl:rotate-180" />
             </button>
           ) : (
             <motion.button
@@ -607,8 +668,8 @@ export function InputMatrix({ onComplete }: Props) {
               onClick={handleSubmit}
               className="px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-neutral-950 font-cinzel text-base font-bold tracking-wider shadow-2xl shadow-amber-500/40 flex items-center gap-3 cursor-pointer"
             >
-              <span>Descend into the Rabbit Hole</span>
-              <ArrowRight className="w-5 h-5" />
+              <span>{t('matrix.button.descend')}</span>
+              <ArrowRight className="w-5 h-5 rtl:rotate-180" />
             </motion.button>
           )}
         </div>
