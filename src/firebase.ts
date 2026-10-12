@@ -13,6 +13,13 @@ import {
 } from "firebase/firestore";
 import aiStudioConfig from "../firebase-applet-config.json";
 
+// ============================================================================
+// TELEMETRY CONFIGURATION
+// Set to true to enable telemetry and session logging to Firestore.
+// Set to false to disable all telemetry features for player confidentiality.
+// ============================================================================
+export const ENABLE_TELEMETRY = false;
+
 const app = initializeApp(aiStudioConfig);
 export const db = getFirestore(app, (aiStudioConfig as any).firestoreDatabaseId);
 
@@ -20,6 +27,7 @@ let hasPrunedThisSession = false;
 
 // Cleanup old telemetry entries to prevent unbounded document accumulation
 export const pruneOldTelemetryIfNeeded = async (maxEntries = 500, pruneBatch = 100) => {
+  if (!ENABLE_TELEMETRY) return;
   if (hasPrunedThisSession) return;
   hasPrunedThisSession = true;
 
@@ -47,6 +55,8 @@ export const pruneOldTelemetryIfNeeded = async (maxEntries = 500, pruneBatch = 1
 };
 
 export const logTelemetry = async (sessionId: string, action: string, details: Record<string, any>) => {
+  if (!ENABLE_TELEMETRY) return;
+
   try {
     await addDoc(collection(db, "telemetry"), {
       sessionId,
@@ -63,6 +73,8 @@ export const logTelemetry = async (sessionId: string, action: string, details: R
 };
 
 export const registerWin = async (sessionId: string, worldview: any, summary: string) => {
+  if (!ENABLE_TELEMETRY) return;
+
   try {
     await addDoc(collection(db, "victories"), {
       sessionId,
