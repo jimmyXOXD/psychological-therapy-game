@@ -22,7 +22,7 @@ const getInitialLocale = (): SupportedLocale => {
       // localStorage may be unavailable
     }
   }
-  return 'en';
+  return 'he';
 };
 
 let currentLocale: SupportedLocale = getInitialLocale();
