@@ -5,6 +5,7 @@
   "hud.innerThoughts": "Inner Thoughts",
   "hud.cursorAway": "Cursor away: Walk or Act",
   "hud.thoughtsTitle": "thoughts",
+  "hud.hoverHeroHint": "Hover cursor over hero to see thoughts",
 
   "taskEnding.peace_need": "My mind feels calm and quiet at last... Now I can go to the rabbit hole at the center to escape!",
   "taskEnding.peace_pain": "The illusion has stopped running away. The true rabbit hole is waiting right here at the center. Time to escape!",

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Heart, Lightbulb, ShieldCheck } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Heart, Lightbulb, Pointer, ShieldCheck } from 'lucide-react';
 import { Worldview } from '../types';
 import { logTelemetry } from '../firebase';
 import { t } from '../locales/i18n';
@@ -91,11 +91,50 @@ export function GameCanvas({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tasksDone, setTasksDone] = useState(false);
-  const [heroThought, setHeroThought] = useState("");
+  const [heroThought, setHeroThoughtState] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [hearts, setHearts] = useState(3);
   const [inSafeZone, setInSafeZone] = useState(false);
+
+  // Blinking lightbulb mark above hero when a new thought arrives
+  const [showThoughtBulb, setShowThoughtBulb] = useState(false);
+  const bulbTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initial onboarding hovering pointer animation to encourage hovering hero
+  const [showInitialPointerHint, setShowInitialPointerHint] = useState(true);
+
+  const setHeroThought = useCallback((thought: string) => {
+    setHeroThoughtState(thought);
+    if (thought) {
+      setShowThoughtBulb(true);
+      if (bulbTimerRef.current) clearTimeout(bulbTimerRef.current);
+      bulbTimerRef.current = setTimeout(() => {
+        setShowThoughtBulb(false);
+      }, 5000); // Display blinking lightbulb for 5 seconds after each thought update
+    }
+  }, []);
+
   const setHudMsg = setHeroThought;
+
+  useEffect(() => {
+    return () => {
+      if (bulbTimerRef.current) clearTimeout(bulbTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    setShowInitialPointerHint(true);
+    const hintTimer = setTimeout(() => {
+      setShowInitialPointerHint(false);
+    }, 7500); // Display hovering pointer animation in the first few seconds of the game
+    return () => clearTimeout(hintTimer);
+  }, [debateAttempt, worldview]);
+
+  useEffect(() => {
+    if (isThinking) {
+      setShowInitialPointerHint(false);
+    }
+  }, [isThinking]);
   
   const propsRef = useRef({ isPaused, onInteractPrimal, onGameOver, onCollectSpecialItem, debateAttempt, collectedItems });
   useEffect(() => {
@@ -3911,6 +3950,36 @@ export function GameCanvas({
   return (
     <div className="relative w-full h-full select-none overflow-hidden">
       <canvas ref={canvasRef} className="block w-full h-full cursor-crosshair touch-none" />
+
+      {/* Blinking Lightbulb Indicator above Hero when a new thought arrives */}
+      <div
+        className={`absolute top-1/2 left-1/2 -translate-x-1/2 pointer-events-none z-20 transition-all duration-700 ease-out flex flex-col items-center ${
+          showThoughtBulb && !isThinking
+            ? 'opacity-85 scale-100 -translate-y-[76px]'
+            : 'opacity-0 scale-75 -translate-y-[64px]'
+        }`}
+        title={t('hud.innerThoughts')}
+      >
+        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-950/40 border border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.25)] backdrop-blur-xs">
+          <Lightbulb className="w-4 h-4 text-amber-300/90 fill-amber-400/50 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Initial Onboarding Pointer Animation: guides player to hover cursor over hero in the first few seconds */}
+      <div
+        className={`absolute top-1/2 left-1/2 translate-x-4 pointer-events-none z-20 transition-all duration-700 ease-out ${
+          showInitialPointerHint && !isThinking
+            ? 'opacity-80 scale-100 translate-y-1'
+            : 'opacity-0 scale-90 translate-y-3'
+        }`}
+      >
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-950/50 border border-amber-400/30 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-xs">
+          <Pointer className="w-3.5 h-3.5 text-amber-300/80 -rotate-45 shrink-0" />
+          <span className="text-[11px] font-mono text-amber-200/85 tracking-wide whitespace-nowrap">
+            {t('hud.hoverHeroHint')}
+          </span>
+        </div>
+      </div>
 
       {/* Immersive Floating Thought Bubble next to Hero */}
       <div 
