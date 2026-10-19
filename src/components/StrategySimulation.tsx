@@ -140,9 +140,6 @@ export function StrategySimulation({ worldview, onMainMenu }: Props) {
     setInputText('');
     setIsTyping(true);
 
-    const nextPromptsCount = promptsSentInAttempt + 1;
-    setPromptsSentInAttempt(nextPromptsCount);
-
     try {
       const chatRes = await fetch('/api/chat', {
         method: 'POST',
@@ -156,12 +153,15 @@ export function StrategySimulation({ worldview, onMainMenu }: Props) {
       });
       const chatData = await chatRes.json();
       
-      let updatedMessages: ChatMessage[] = newMessages;
       if (!chatRes.ok) {
-        updatedMessages = [...newMessages, { role: 'model', text: `[System Error]: ${chatData.error || 'Unknown error. Please check API keys.'}` }];
-      } else {
-        updatedMessages = [...newMessages, { role: 'model', text: chatData.text }];
+        setMessages([...newMessages, { role: 'model', text: `[System Error]: ${chatData.error || 'Temporary connection issue. Please try again.'}` }]);
+        return;
       }
+
+      const nextPromptsCount = promptsSentInAttempt + 1;
+      setPromptsSentInAttempt(nextPromptsCount);
+
+      const updatedMessages: ChatMessage[] = [...newMessages, { role: 'model', text: chatData.text }];
       setMessages(updatedMessages);
 
       const evalRes = await fetch('/api/evaluate', {

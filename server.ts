@@ -8,6 +8,56 @@ function getAI() {
   return new GoogleGenAI(process.env.GEMINI_API_KEY ? { apiKey: process.env.GEMINI_API_KEY } : {});
 }
 
+async function generateWithRetry(params: {
+  contents: any;
+  config?: any;
+  preferredModel?: string;
+  fallbackModels?: string[];
+}) {
+  const models = [
+    params.preferredModel || 'gemini-3.1-flash-lite',
+    ...(params.fallbackModels || ['gemini-3.8-flash'])
+  ];
+
+  let lastError: any = null;
+
+  for (const model of models) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await getAI().models.generateContent({
+          model,
+          contents: params.contents,
+          config: params.config
+        });
+        return response;
+      } catch (err: any) {
+        lastError = err;
+        const msg = String(err?.message || '');
+        const isTransient = 
+          msg.includes('high demand') ||
+          msg.includes('503') ||
+          msg.includes('429') ||
+          msg.includes('ResourceExhausted') ||
+          msg.includes('UNAVAILABLE') ||
+          msg.includes('spikes in demand') ||
+          msg.includes('overloaded');
+
+        if (isTransient && attempt < 2) {
+          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+          console.warn(`[Gemini API] High demand on ${model} (attempt ${attempt + 1}/3). Retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+
+        console.warn(`[Gemini API] Switching/exhausted for model ${model}: ${msg}`);
+        break;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 
 const singularAgent: Record<string, string> = { 'enemies': 'enemy', 'lovers': 'lover', 'bosses': 'boss', 'subordinates': 'subordinate', 'strangers': 'stranger', 'self': 'self' };
 const roleDefs: Record<string, string> = {
@@ -128,8 +178,9 @@ Respond in ${targetLang.label}.`;
         parts: [{ text: msg.text }]
       }));
 
-      const response = await getAI().models.generateContent({
-        model: 'gemini-3.1-flash-lite',
+      const response = await generateWithRetry({
+        preferredModel: 'gemini-3.1-flash-lite',
+        fallbackModels: ['gemini-3.8-flash'],
         contents: [
           ...formattedHistory,
           { role: 'user', parts: [{ text: message }] }
@@ -195,8 +246,9 @@ Chat Log:
 ${JSON.stringify(chatLog)}
 `;
 
-      const response = await getAI().models.generateContent({
-        model: 'gemini-3.1-flash-lite',
+      const response = await generateWithRetry({
+        preferredModel: 'gemini-3.1-flash-lite',
+        fallbackModels: ['gemini-3.8-flash'],
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
